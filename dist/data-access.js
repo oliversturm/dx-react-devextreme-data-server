@@ -66,7 +66,9 @@
       take: undefined } : {};
 
     const createQueryURL = (baseUrl, loadOptions) => {
-      const params = Object.assign.apply({}, [getSortingParams(loadOptions), getPagingParams(loadOptions), getFilterParams(loadOptions), getGroupParams(loadOptions)]);
+      const params = Object.assign.apply({}, [getSortingParams(loadOptions), getPagingParams(loadOptions), getFilterParams(loadOptions), getGroupParams(loadOptions), {
+        tzOffset: new Date().getTimezoneOffset()
+      }]);
 
       console.log('Created params: ', params);
 
