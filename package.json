@@ -1,6 +1,6 @@
 {
   "name": "dx-react-devextreme-data-server",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "DevExtreme React Grid plugin for remote data loading from a DevExtreme data service",
   "repository": {
     "type": "git",
