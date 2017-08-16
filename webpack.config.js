@@ -27,11 +27,26 @@ module.exports = {
       }
     ]
   },
-  externals: [
-    'react',
-    'react-dom',
-    'qs',
-    'prop-types',
-    '@devexpress/dx-react-core'
-  ]
+  externals: {
+    react: {
+      root: 'React',
+      commonjs: 'react',
+      commonjs2: 'react',
+      amd: 'react'
+    },
+    'react-dom': 'react-dom',
+    qs: 'qs',
+    'prop-types': {
+      root: 'PropTypes',
+      commonjs: 'prop-types',
+      commonjs2: 'prop-types',
+      amd: 'prop-types'
+    },
+    '@devexpress/dx-react-core': {
+      root: ['DevExpress', 'DXReactCore'],
+      commonjs: '@devexpress/dx-react-core',
+      commonjs2: '@devexpress/dx-react-core',
+      amd: '@devexpress/dx-react-core'
+    }
+  }
 };
