@@ -35,7 +35,12 @@ module.exports = {
       amd: 'react'
     },
     'react-dom': 'react-dom',
-    qs: 'qs',
+    qs: {
+      root: 'Qs',
+      commonjs: 'qs',
+      commonjs2: 'qs',
+      amd: 'qs'
+    },
     'prop-types': {
       root: 'PropTypes',
       commonjs: 'prop-types',

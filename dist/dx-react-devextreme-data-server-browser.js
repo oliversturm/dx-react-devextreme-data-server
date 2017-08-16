@@ -6,7 +6,7 @@
 	else if(typeof exports === 'object')
 		exports["DXReactDevExtremeDataServer"] = factory(require("react"), require("prop-types"), require("@devexpress/dx-react-core"), require("qs"));
 	else
-		root["DXReactDevExtremeDataServer"] = factory(root["React"], root["PropTypes"], root["DevExpress"]["DXReactCore"], root["qs"]);
+		root["DXReactDevExtremeDataServer"] = factory(root["React"], root["PropTypes"], root["DevExpress"]["DXReactCore"], root["Qs"]);
 })(this, function(__WEBPACK_EXTERNAL_MODULE_1__, __WEBPACK_EXTERNAL_MODULE_2__, __WEBPACK_EXTERNAL_MODULE_3__, __WEBPACK_EXTERNAL_MODULE_5__) {
 return /******/ (function(modules) { // webpackBootstrap
 /******/ 	// The module cache
