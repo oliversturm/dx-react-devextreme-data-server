@@ -1,0 +1,17 @@
+{
+  "plugins": [
+    ["transform-es2015-modules-umd", {
+      "globals": {
+        "index": "DXReactDevExtremeDataServer",
+        "./data-access": "DXReactDevExtremeDataAccess",
+        "data-access": "DXReactDevExtremeDataAccess",
+        "react": "React",
+        "prop-types": "PropTypes",
+        "@devexpress/dx-react-core": "DevExpress.DXReactCore"
+      },
+      "exactGlobals": true
+    }],
+    "transform-react-jsx"
+  ],
+  "comments": false
+}

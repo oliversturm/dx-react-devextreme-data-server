@@ -8,7 +8,7 @@
       exports: {}
     };
     factory(mod.exports, global.qs);
-    global.dataAccess = mod.exports;
+    global.DXReactDevExtremeDataAccess = mod.exports;
   }
 })(this, function (exports, _qs) {
   'use strict';

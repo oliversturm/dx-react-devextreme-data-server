@@ -7,8 +7,8 @@
     var mod = {
       exports: {}
     };
-    factory(mod.exports, global.react, global.propTypes, global.dxReactCore, global.dataAccess, global.loading);
-    global.index = mod.exports;
+    factory(mod.exports, global.React, global.PropTypes, global.DevExpress.DXReactCore, global.DXReactDevExtremeDataAccess, global.loadingCss);
+    global.DXReactDevExtremeDataServer = mod.exports;
   }
 })(this, function (exports, _react, _propTypes, _dxReactCore, _dataAccess) {
   'use strict';
