@@ -191,4 +191,4 @@ DevExtremeDataServer.propTypes = {
   loadingIndicatorThreshold: PropTypes.number
 };
 
-export default DevExtremeDataServer;
+export { DevExtremeDataServer };

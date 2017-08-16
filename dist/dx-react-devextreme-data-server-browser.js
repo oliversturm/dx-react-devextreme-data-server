@@ -98,6 +98,7 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_
   Object.defineProperty(exports, "__esModule", {
     value: true
   });
+  exports.DevExtremeDataServer = undefined;
 
   var _react2 = _interopRequireDefault(_react);
 
@@ -328,7 +329,7 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_
     loadingIndicatorThreshold: _propTypes2.default.number
   };
 
-  exports.default = DevExtremeDataServer;
+  exports.DevExtremeDataServer = DevExtremeDataServer;
 });
 
 /***/ }),

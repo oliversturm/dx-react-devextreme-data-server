@@ -16,6 +16,7 @@
   Object.defineProperty(exports, "__esModule", {
     value: true
   });
+  exports.DevExtremeDataServer = undefined;
 
   var _react2 = _interopRequireDefault(_react);
 
@@ -164,5 +165,5 @@
     loadingIndicatorThreshold: _propTypes2.default.number
   };
 
-  exports.default = DevExtremeDataServer;
+  exports.DevExtremeDataServer = DevExtremeDataServer;
 });
