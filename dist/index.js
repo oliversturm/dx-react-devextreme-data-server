@@ -116,9 +116,7 @@
               expandedGroups: vals[5] ? Array.from(vals[5].values()) : [],
               loading: true
             });
-            if (newPage !== vals[1]) action('setCurrentPage')({
-              page: newPage
-            });
+            if (newPage !== vals[1]) action('setCurrentPage')(newPage);
           }
         }),
         _react2.default.createElement(_dxReactCore.Getter, { name: 'totalCount', value: this.getTotalCount() }),
@@ -132,7 +130,7 @@
         _react2.default.createElement(_dxReactCore.Watcher, {
           watch: getter => [getter('totalPages'), getter('currentPage')],
           onChange: (action, totalPages, currentPage) => {
-            if (totalPages > 0 && totalPages - 1 <= currentPage) action('setCurrentPage')({ page: Math.max(totalPages - 1, 0) });
+            if (totalPages > 0 && totalPages - 1 <= currentPage) action('setCurrentPage')(Math.max(totalPages - 1, 0));
           }
         }),
         _react2.default.createElement(
