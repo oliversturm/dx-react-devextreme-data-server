@@ -189,12 +189,12 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_
     _createClass(DevExtremeDataServer, [{
       key: 'getRows',
       value: function getRows() {
-        return this.state.loadResult ? this.state.loadResult.rows : [];
+        return this.state.loadResult && this.state.loadResult.rows ? this.state.loadResult.rows : [];
       }
     }, {
       key: 'getTotalCount',
       value: function getTotalCount() {
-        return this.state.loadResult ? this.state.loadResult.totalCount : 0;
+        return this.state.loadResult && this.state.loadResult.totalCount ? this.state.loadResult.totalCount : 0;
       }
     }, {
       key: 'getData',
@@ -241,6 +241,7 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_
         if (this.props.reloadState !== prevProps.reloadState && !this.state.loading) this.setState({
           loading: true
         });
+
         if (prevState.sorting !== this.state.sorting || prevState.currentPage !== this.state.currentPage || prevState.pageSize !== this.state.pageSize || prevState.filters !== this.state.filters || prevState.grouping !== this.state.grouping || prevState.expandedGroups !== this.state.expandedGroups || prevProps.reloadState !== this.props.reloadState) this.getData(this.getLoadOptions());
       }
     }, {
@@ -260,7 +261,11 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_
                 vals[_key - 1] = arguments[_key];
               }
 
-              var newPage = _this3.state.pageSize >= 0 && _this3.state.pageSize !== vals[2] ? Math.trunc(vals[1] * _this3.state.pageSize / vals[2]) : vals[1];
+              var oldPageSize = _this3.state.pageSize || vals[2];
+
+              var newPage = function () {
+                if (oldPageSize !== vals[2]) return vals[2] > 0 ? Math.trunc(vals[1] * oldPageSize / vals[2]) : 0;else return vals[1];
+              }();
 
               _this3.setState({
                 sorting: vals[0],
@@ -280,7 +285,7 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_
           _react2.default.createElement(_dxReactCore.Getter, {
             name: 'totalPages',
             pureComputed: function pureComputed(totalCount, pageSize) {
-              return pageSize ? Math.ceil(totalCount / pageSize) : 0;
+              return pageSize > 0 ? Math.ceil(totalCount / pageSize) : totalCount > 0 ? 1 : 0;
             },
             connectArgs: function connectArgs(getter) {
               return [getter('totalCount'), getter('pageSize')];
@@ -291,7 +296,7 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_
               return [getter('totalPages'), getter('currentPage')];
             },
             onChange: function onChange(action, totalPages, currentPage) {
-              if (totalPages > 0 && totalPages - 1 <= currentPage) action('setCurrentPage')(Math.max(totalPages - 1, 0));
+              if (totalPages > 0 && totalPages - 1 < currentPage) action('setCurrentPage')(Math.max(totalPages - 1, 0));
             }
           }),
           _react2.default.createElement(
@@ -413,10 +418,7 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_
 
     var getPagingParams = function getPagingParams(loadOptions) {
       var params = {};
-      if (loadOptions.pageSize) {
-        params.take = loadOptions.pageSize;
-        params.requireTotalCount = true;
-      }
+      if (loadOptions.pageSize) params.take = loadOptions.pageSize;
       if (loadOptions.currentPage > 0) params.skip = loadOptions.currentPage * loadOptions.pageSize;
       return params;
     };
@@ -448,6 +450,7 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_
 
     var createQueryURL = function createQueryURL(baseUrl, loadOptions) {
       var params = Object.assign.apply({}, [getSortingParams(loadOptions), getPagingParams(loadOptions), getFilterParams(loadOptions), getGroupParams(loadOptions), {
+        requireTotalCount: true,
         tzOffset: new Date().getTimezoneOffset()
       }]);
 

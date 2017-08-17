@@ -38,10 +38,7 @@
 
     const getPagingParams = loadOptions => {
       const params = {};
-      if (loadOptions.pageSize) {
-        params.take = loadOptions.pageSize;
-        params.requireTotalCount = true;
-      }
+      if (loadOptions.pageSize) params.take = loadOptions.pageSize;
       if (loadOptions.currentPage > 0) params.skip = loadOptions.currentPage * loadOptions.pageSize;
       return params;
     };
@@ -67,6 +64,7 @@
 
     const createQueryURL = (baseUrl, loadOptions) => {
       const params = Object.assign.apply({}, [getSortingParams(loadOptions), getPagingParams(loadOptions), getFilterParams(loadOptions), getGroupParams(loadOptions), {
+        requireTotalCount: true,
         tzOffset: new Date().getTimezoneOffset()
       }]);
 

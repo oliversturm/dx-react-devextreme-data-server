@@ -49,11 +49,11 @@
     }
 
     getRows() {
-      return this.state.loadResult ? this.state.loadResult.rows : [];
+      return this.state.loadResult && this.state.loadResult.rows ? this.state.loadResult.rows : [];
     }
 
     getTotalCount() {
-      return this.state.loadResult ? this.state.loadResult.totalCount : 0;
+      return this.state.loadResult && this.state.loadResult.totalCount ? this.state.loadResult.totalCount : 0;
     }
 
     getData(loadOptions) {
@@ -95,6 +95,7 @@
       if (this.props.reloadState !== prevProps.reloadState && !this.state.loading) this.setState({
         loading: true
       });
+
       if (prevState.sorting !== this.state.sorting || prevState.currentPage !== this.state.currentPage || prevState.pageSize !== this.state.pageSize || prevState.filters !== this.state.filters || prevState.grouping !== this.state.grouping || prevState.expandedGroups !== this.state.expandedGroups || prevProps.reloadState !== this.props.reloadState) this.getData(this.getLoadOptions());
     }
 
@@ -105,7 +106,11 @@
         _react2.default.createElement(_dxReactCore.Watcher, {
           watch: getter => ['sorting', 'currentPage', 'pageSize', 'filters', 'grouping', 'expandedGroups'].map(getter),
           onChange: (action, ...vals) => {
-            const newPage = this.state.pageSize >= 0 && this.state.pageSize !== vals[2] ? Math.trunc(vals[1] * this.state.pageSize / vals[2]) : vals[1];
+            const oldPageSize = this.state.pageSize || vals[2];
+
+            const newPage = (() => {
+              if (oldPageSize !== vals[2]) return vals[2] > 0 ? Math.trunc(vals[1] * oldPageSize / vals[2]) : 0;else return vals[1];
+            })();
 
             this.setState({
               sorting: vals[0],
@@ -124,13 +129,13 @@
         _react2.default.createElement(_dxReactCore.Getter, { name: 'loading', value: this.state.loading }),
         _react2.default.createElement(_dxReactCore.Getter, {
           name: 'totalPages',
-          pureComputed: (totalCount, pageSize) => pageSize ? Math.ceil(totalCount / pageSize) : 0,
+          pureComputed: (totalCount, pageSize) => pageSize > 0 ? Math.ceil(totalCount / pageSize) : totalCount > 0 ? 1 : 0,
           connectArgs: getter => [getter('totalCount'), getter('pageSize')]
         }),
         _react2.default.createElement(_dxReactCore.Watcher, {
           watch: getter => [getter('totalPages'), getter('currentPage')],
           onChange: (action, totalPages, currentPage) => {
-            if (totalPages > 0 && totalPages - 1 <= currentPage) action('setCurrentPage')(Math.max(totalPages - 1, 0));
+            if (totalPages > 0 && totalPages - 1 < currentPage) action('setCurrentPage')(Math.max(totalPages - 1, 0));
           }
         }),
         _react2.default.createElement(
