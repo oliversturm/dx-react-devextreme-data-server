@@ -15,10 +15,7 @@ const createDataFetcher = (BASEDATA = DEFAULTBASEDATA) => {
 
   const getPagingParams = loadOptions => {
     const params = {};
-    if (loadOptions.pageSize) {
-      params.take = loadOptions.pageSize;
-      params.requireTotalCount = true;
-    }
+    if (loadOptions.pageSize) params.take = loadOptions.pageSize;
     if (loadOptions.currentPage > 0)
       params.skip = loadOptions.currentPage * loadOptions.pageSize;
     return params;
@@ -67,6 +64,7 @@ const createDataFetcher = (BASEDATA = DEFAULTBASEDATA) => {
       getFilterParams(loadOptions),
       getGroupParams(loadOptions), // overrides skip and take
       {
+        requireTotalCount: true,
         tzOffset: new Date().getTimezoneOffset()
       }
     ]);
