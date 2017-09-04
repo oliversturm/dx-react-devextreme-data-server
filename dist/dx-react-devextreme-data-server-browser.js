@@ -284,11 +284,8 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_
           _react2.default.createElement(_dxReactCore.Getter, { name: 'loading', value: this.state.loading }),
           _react2.default.createElement(_dxReactCore.Getter, {
             name: 'totalPages',
-            pureComputed: function pureComputed(totalCount, pageSize) {
-              return pageSize > 0 ? Math.ceil(totalCount / pageSize) : totalCount > 0 ? 1 : 0;
-            },
-            connectArgs: function connectArgs(getter) {
-              return [getter('totalCount'), getter('pageSize')];
+            pureComputed: function pureComputed(getters) {
+              return getters.pageSize > 0 ? Math.ceil(getters.totalCount / getters.pageSize) : getters.totalCount > 0 ? 1 : 0;
             }
           }),
           _react2.default.createElement(_dxReactCore.Watcher, {
@@ -739,14 +736,9 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_
                   return {
                     _headerKey: 'groupRow_' + loadOptions.grouping[groupLevel].columnName,
                     key: (parentGroupRow ? parentGroupRow.key + '|' : '') + ('' + group.key),
-                    colspan: parentGroupRow ? parentGroupRow.colspan + 1 : 1,
+                    groupedBy: loadOptions.grouping[groupLevel].columnName,
                     value: group.key,
-                    type: 'groupRow',
-                    column: {
-                      name: loadOptions.grouping[groupLevel].columnName,
-                      title: loadOptions.grouping[groupLevel].columnName
-                    },
-                    rows: []
+                    type: 'groupRow'
                   };
                 };
 
