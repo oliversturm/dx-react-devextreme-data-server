@@ -156,7 +156,7 @@ class DevExtremeDataServer extends React.PureComponent {
         }
         <Getter
           name="totalPages"
-          pureComputed={getters =>
+          computed={getters =>
             getters.pageSize > 0
               ? Math.ceil(getters.totalCount / getters.pageSize)
               : getters.totalCount > 0 ? 1 : 0}
