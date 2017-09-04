@@ -284,7 +284,7 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_
           _react2.default.createElement(_dxReactCore.Getter, { name: 'loading', value: this.state.loading }),
           _react2.default.createElement(_dxReactCore.Getter, {
             name: 'totalPages',
-            pureComputed: function pureComputed(getters) {
+            computed: function computed(getters) {
               return getters.pageSize > 0 ? Math.ceil(getters.totalCount / getters.pageSize) : getters.totalCount > 0 ? 1 : 0;
             }
           }),

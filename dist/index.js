@@ -129,7 +129,7 @@
         _react2.default.createElement(_dxReactCore.Getter, { name: 'loading', value: this.state.loading }),
         _react2.default.createElement(_dxReactCore.Getter, {
           name: 'totalPages',
-          pureComputed: getters => getters.pageSize > 0 ? Math.ceil(getters.totalCount / getters.pageSize) : getters.totalCount > 0 ? 1 : 0
+          computed: getters => getters.pageSize > 0 ? Math.ceil(getters.totalCount / getters.pageSize) : getters.totalCount > 0 ? 1 : 0
         }),
         _react2.default.createElement(_dxReactCore.Watcher, {
           watch: getter => [getter('totalPages'), getter('currentPage')],
