@@ -279,6 +279,9 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_
               if (newPage !== vals[1]) action('setCurrentPage')(newPage);
             }
           }),
+          _react2.default.createElement(_dxReactCore.Getter, { name: 'isGroupRow', value: function value(row) {
+              return row.type === 'group';
+            } }),
           _react2.default.createElement(_dxReactCore.Getter, { name: 'totalCount', value: this.getTotalCount() }),
           _react2.default.createElement(_dxReactCore.Getter, { name: 'rows', value: this.getRows() }),
           _react2.default.createElement(_dxReactCore.Getter, { name: 'loading', value: this.state.loading }),
