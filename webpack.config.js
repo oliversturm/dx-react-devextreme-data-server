@@ -47,11 +47,23 @@ module.exports = {
       commonjs2: 'prop-types',
       amd: 'prop-types'
     },
+    lodash: {
+      root: '_',
+      commonjs: 'lodash',
+      commonjs2: 'lodash',
+      amd: 'lodash'
+    },
     '@devexpress/dx-react-core': {
       root: ['DevExpress', 'DXReactCore'],
       commonjs: '@devexpress/dx-react-core',
       commonjs2: '@devexpress/dx-react-core',
       amd: '@devexpress/dx-react-core'
+    },
+    '@devexpress/dx-react-grid': {
+      root: ['DevExpress', 'DXReactGrid'],
+      commonjs: '@devexpress/dx-react-grid',
+      commonjs2: '@devexpress/dx-react-grid',
+      amd: '@devexpress/dx-react-grid'
     }
   }
 };

@@ -1,16 +1,16 @@
 (function (global, factory) {
   if (typeof define === "function" && define.amd) {
-    define(['exports', 'react', 'prop-types', '@devexpress/dx-react-core', './data-access', './loading.css'], factory);
+    define(['exports', 'react', 'prop-types', '@devexpress/dx-react-core', '@devexpress/dx-react-grid', 'lodash', './data-access', './loading.css'], factory);
   } else if (typeof exports !== "undefined") {
-    factory(exports, require('react'), require('prop-types'), require('@devexpress/dx-react-core'), require('./data-access'), require('./loading.css'));
+    factory(exports, require('react'), require('prop-types'), require('@devexpress/dx-react-core'), require('@devexpress/dx-react-grid'), require('lodash'), require('./data-access'), require('./loading.css'));
   } else {
     var mod = {
       exports: {}
     };
-    factory(mod.exports, global.React, global.PropTypes, global.DevExpress.DXReactCore, global.DXReactDevExtremeDataAccess, global.loadingCss);
+    factory(mod.exports, global.React, global.PropTypes, global.DevExpress.DXReactCore, global.devexpressDxReactGrid, global.lodash, global.DXReactDevExtremeDataAccess, global.loadingCss);
     global.DXReactDevExtremeDataServer = mod.exports;
   }
-})(this, function (exports, _react, _propTypes, _dxReactCore, _dataAccess) {
+})(this, function (exports, _react, _propTypes, _dxReactCore, _dxReactGrid, _lodash, _dataAccess) {
   'use strict';
 
   Object.defineProperty(exports, "__esModule", {
@@ -21,6 +21,8 @@
   var _react2 = _interopRequireDefault(_react);
 
   var _propTypes2 = _interopRequireDefault(_propTypes);
+
+  var _lodash2 = _interopRequireDefault(_lodash);
 
   function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
@@ -74,10 +76,26 @@
             loadResult: {
               rows: res.data.rows,
               totalCount: res.data.totalCount
-            }
+            },
+            tempGrouping: null,
+            tempExpandedGroups: null
           });
         }
       });
+    }
+
+    getChildGroups(currentRows, grouping) {
+      if (currentRows.length === 0 || currentRows[0].type !== 'groupRow') {
+        return [];
+      }
+      return currentRows.reduce((acc, row) => {
+        if (row.type === 'groupRow' && row.groupedBy === grouping.columnName) {
+          acc.push({ key: row.key, value: row.value, childRows: [] });
+        } else {
+          acc[acc.length - 1].childRows.push(row);
+        }
+        return acc;
+      }, []);
     }
 
     getLoadOptions() {
@@ -96,46 +114,70 @@
         loading: true
       });
 
-      if (prevState.sorting !== this.state.sorting || prevState.currentPage !== this.state.currentPage || prevState.pageSize !== this.state.pageSize || prevState.filters !== this.state.filters || prevState.grouping !== this.state.grouping || prevState.expandedGroups !== this.state.expandedGroups || prevProps.reloadState !== this.props.reloadState) this.getData(this.getLoadOptions());
+      if (prevState.sorting !== this.state.sorting || prevState.currentPage !== this.state.currentPage || prevState.pageSize !== this.state.pageSize || prevState.filters !== this.state.filters || prevState.grouping !== this.state.grouping || prevState.expandedGroups !== this.state.expandedGroups || prevProps.reloadState !== this.props.reloadState) {
+        this.getData(this.getLoadOptions());
+      }
     }
 
     render() {
       return _react2.default.createElement(
         _dxReactCore.PluginContainer,
         null,
-        _react2.default.createElement(_dxReactCore.Watcher, {
-          watch: getter => ['sorting', 'currentPage', 'pageSize', 'filters', 'grouping', 'expandedGroups'].map(getter),
-          onChange: (action, ...vals) => {
-            const oldPageSize = this.state.pageSize || vals[2];
+        _react2.default.createElement(_dxReactCore.Getter, {
+          name: 'rows',
+          computed: ({
+            sorting,
+            currentPage,
+            pageSize,
+            filters,
+            grouping,
+            expandedGroups
+          }, actions) => {
+            const oldPageSize = this.state.pageSize || pageSize;
 
             const newPage = (() => {
-              if (oldPageSize !== vals[2]) return vals[2] > 0 ? Math.trunc(vals[1] * oldPageSize / vals[2]) : 0;else return vals[1];
+              if (oldPageSize !== pageSize) return pageSize > 0 ? Math.trunc(currentPage * oldPageSize / pageSize) : 0;else return currentPage;
             })();
 
-            this.setState({
-              sorting: vals[0],
+            const newState = {
+              sorting,
               currentPage: newPage,
-              pageSize: vals[2],
-              filters: vals[3],
-              grouping: vals[4],
-              expandedGroups: vals[5] ? Array.from(vals[5].values()) : [],
+              pageSize,
+              filters,
+              grouping,
+              expandedGroups,
               loading: true
-            });
-            if (newPage !== vals[1]) action('setCurrentPage')(newPage);
+            };
+
+            if (!_lodash2.default.isEqual(this.state.grouping, grouping) || !_lodash2.default.isEqual(this.state.expandedGroups, expandedGroups)) {
+              newState.tempGrouping = this.state.grouping;
+              newState.tempExpandedGroups = this.state.expandedGroups ? Array.from(this.state.expandedGroups.values()) : [];
+            }
+
+            setTimeout(() => this.setState(newState));
+
+            if (newPage !== currentPage) actions.setCurrentPage(newPage);
+
+            return [];
           }
         }),
-        _react2.default.createElement(_dxReactCore.Getter, { name: 'isGroupRow', value: row => row.type === 'group' }),
         _react2.default.createElement(_dxReactCore.Getter, { name: 'totalCount', value: this.getTotalCount() }),
         _react2.default.createElement(_dxReactCore.Getter, { name: 'rows', value: this.getRows() }),
+        _react2.default.createElement(_dxReactGrid.CustomGrouping, {
+          getChildGroups: this.getChildGroups,
+          grouping: this.state.tempGrouping,
+          expandedGroups: this.state.tempExpandedGroups
+        }),
         _react2.default.createElement(_dxReactCore.Getter, { name: 'loading', value: this.state.loading }),
         _react2.default.createElement(_dxReactCore.Getter, {
           name: 'totalPages',
-          computed: getters => getters.pageSize > 0 ? Math.ceil(getters.totalCount / getters.pageSize) : getters.totalCount > 0 ? 1 : 0
+          computed: ({ pageSize, totalCount }) => pageSize > 0 ? Math.ceil(totalCount / pageSize) : totalCount > 0 ? 1 : 0
         }),
-        _react2.default.createElement(_dxReactCore.Watcher, {
-          watch: getter => [getter('totalPages'), getter('currentPage')],
-          onChange: (action, totalPages, currentPage) => {
-            if (totalPages > 0 && totalPages - 1 < currentPage) action('setCurrentPage')(Math.max(totalPages - 1, 0));
+        _react2.default.createElement(_dxReactCore.Getter, {
+          name: 'currentPage',
+          computed: ({ currentPage, totalPages }, actions) => {
+            if (totalPages > 0 && totalPages - 1 < currentPage) actions.setCurrentPage(Math.max(totalPages - 1, 0));
+            return currentPage;
           }
         }),
         _react2.default.createElement(

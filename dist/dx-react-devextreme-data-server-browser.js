@@ -1,13 +1,13 @@
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
-		module.exports = factory(require("react"), require("prop-types"), require("@devexpress/dx-react-core"), require("qs"));
+		module.exports = factory(require("react"), require("prop-types"), require("@devexpress/dx-react-core"), require("@devexpress/dx-react-grid"), require("lodash"), require("qs"));
 	else if(typeof define === 'function' && define.amd)
-		define(["react", "prop-types", "@devexpress/dx-react-core", "qs"], factory);
+		define(["react", "prop-types", "@devexpress/dx-react-core", "@devexpress/dx-react-grid", "lodash", "qs"], factory);
 	else if(typeof exports === 'object')
-		exports["DXReactDevExtremeDataServer"] = factory(require("react"), require("prop-types"), require("@devexpress/dx-react-core"), require("qs"));
+		exports["DXReactDevExtremeDataServer"] = factory(require("react"), require("prop-types"), require("@devexpress/dx-react-core"), require("@devexpress/dx-react-grid"), require("lodash"), require("qs"));
 	else
-		root["DXReactDevExtremeDataServer"] = factory(root["React"], root["PropTypes"], root["DevExpress"]["DXReactCore"], root["Qs"]);
-})(this, function(__WEBPACK_EXTERNAL_MODULE_1__, __WEBPACK_EXTERNAL_MODULE_2__, __WEBPACK_EXTERNAL_MODULE_3__, __WEBPACK_EXTERNAL_MODULE_5__) {
+		root["DXReactDevExtremeDataServer"] = factory(root["React"], root["PropTypes"], root["DevExpress"]["DXReactCore"], root["DevExpress"]["DXReactGrid"], root["_"], root["Qs"]);
+})(this, function(__WEBPACK_EXTERNAL_MODULE_1__, __WEBPACK_EXTERNAL_MODULE_2__, __WEBPACK_EXTERNAL_MODULE_3__, __WEBPACK_EXTERNAL_MODULE_4__, __WEBPACK_EXTERNAL_MODULE_5__, __WEBPACK_EXTERNAL_MODULE_7__) {
 return /******/ (function(modules) { // webpackBootstrap
 /******/ 	// The module cache
 /******/ 	var installedModules = {};
@@ -79,20 +79,20 @@ return /******/ (function(modules) { // webpackBootstrap
 
 var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;(function (global, factory) {
   if (true) {
-    !(__WEBPACK_AMD_DEFINE_ARRAY__ = [exports, __webpack_require__(1), __webpack_require__(2), __webpack_require__(3), __webpack_require__(4), __webpack_require__(6)], __WEBPACK_AMD_DEFINE_FACTORY__ = (factory),
+    !(__WEBPACK_AMD_DEFINE_ARRAY__ = [exports, __webpack_require__(1), __webpack_require__(2), __webpack_require__(3), __webpack_require__(4), __webpack_require__(5), __webpack_require__(6), __webpack_require__(8)], __WEBPACK_AMD_DEFINE_FACTORY__ = (factory),
 				__WEBPACK_AMD_DEFINE_RESULT__ = (typeof __WEBPACK_AMD_DEFINE_FACTORY__ === 'function' ?
 				(__WEBPACK_AMD_DEFINE_FACTORY__.apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__)) : __WEBPACK_AMD_DEFINE_FACTORY__),
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
   } else if (typeof exports !== "undefined") {
-    factory(exports, require('react'), require('prop-types'), require('@devexpress/dx-react-core'), require('./data-access'), require('./loading.css'));
+    factory(exports, require('react'), require('prop-types'), require('@devexpress/dx-react-core'), require('@devexpress/dx-react-grid'), require('lodash'), require('./data-access'), require('./loading.css'));
   } else {
     var mod = {
       exports: {}
     };
-    factory(mod.exports, global.React, global.PropTypes, global.DevExpress.DXReactCore, global.DXReactDevExtremeDataAccess, global.loadingCss);
+    factory(mod.exports, global.React, global.PropTypes, global.DevExpress.DXReactCore, global.devexpressDxReactGrid, global.lodash, global.DXReactDevExtremeDataAccess, global.loadingCss);
     global.DXReactDevExtremeDataServer = mod.exports;
   }
-})(this, function (exports, _react, _propTypes, _dxReactCore, _dataAccess) {
+})(this, function (exports, _react, _propTypes, _dxReactCore, _dxReactGrid, _lodash, _dataAccess) {
   'use strict';
 
   Object.defineProperty(exports, "__esModule", {
@@ -103,6 +103,8 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_
   var _react2 = _interopRequireDefault(_react);
 
   var _propTypes2 = _interopRequireDefault(_propTypes);
+
+  var _lodash2 = _interopRequireDefault(_lodash);
 
   function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : {
@@ -218,10 +220,27 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_
               loadResult: {
                 rows: res.data.rows,
                 totalCount: res.data.totalCount
-              }
+              },
+              tempGrouping: null,
+              tempExpandedGroups: null
             });
           }
         });
+      }
+    }, {
+      key: 'getChildGroups',
+      value: function getChildGroups(currentRows, grouping) {
+        if (currentRows.length === 0 || currentRows[0].type !== 'groupRow') {
+          return [];
+        }
+        return currentRows.reduce(function (acc, row) {
+          if (row.type === 'groupRow' && row.groupedBy === grouping.columnName) {
+            acc.push({ key: row.key, value: row.value, childRows: [] });
+          } else {
+            acc[acc.length - 1].childRows.push(row);
+          }
+          return acc;
+        }, []);
       }
     }, {
       key: 'getLoadOptions',
@@ -242,7 +261,9 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_
           loading: true
         });
 
-        if (prevState.sorting !== this.state.sorting || prevState.currentPage !== this.state.currentPage || prevState.pageSize !== this.state.pageSize || prevState.filters !== this.state.filters || prevState.grouping !== this.state.grouping || prevState.expandedGroups !== this.state.expandedGroups || prevProps.reloadState !== this.props.reloadState) this.getData(this.getLoadOptions());
+        if (prevState.sorting !== this.state.sorting || prevState.currentPage !== this.state.currentPage || prevState.pageSize !== this.state.pageSize || prevState.filters !== this.state.filters || prevState.grouping !== this.state.grouping || prevState.expandedGroups !== this.state.expandedGroups || prevProps.reloadState !== this.props.reloadState) {
+          this.getData(this.getLoadOptions());
+        }
       }
     }, {
       key: 'render',
@@ -252,51 +273,70 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_
         return _react2.default.createElement(
           _dxReactCore.PluginContainer,
           null,
-          _react2.default.createElement(_dxReactCore.Watcher, {
-            watch: function watch(getter) {
-              return ['sorting', 'currentPage', 'pageSize', 'filters', 'grouping', 'expandedGroups'].map(getter);
-            },
-            onChange: function onChange(action) {
-              for (var _len = arguments.length, vals = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
-                vals[_key - 1] = arguments[_key];
-              }
+          _react2.default.createElement(_dxReactCore.Getter, {
+            name: 'rows',
+            computed: function computed(_ref, actions) {
+              var sorting = _ref.sorting,
+                  currentPage = _ref.currentPage,
+                  pageSize = _ref.pageSize,
+                  filters = _ref.filters,
+                  grouping = _ref.grouping,
+                  expandedGroups = _ref.expandedGroups;
 
-              var oldPageSize = _this3.state.pageSize || vals[2];
+              var oldPageSize = _this3.state.pageSize || pageSize;
 
               var newPage = function () {
-                if (oldPageSize !== vals[2]) return vals[2] > 0 ? Math.trunc(vals[1] * oldPageSize / vals[2]) : 0;else return vals[1];
+                if (oldPageSize !== pageSize) return pageSize > 0 ? Math.trunc(currentPage * oldPageSize / pageSize) : 0;else return currentPage;
               }();
 
-              _this3.setState({
-                sorting: vals[0],
+              var newState = {
+                sorting: sorting,
                 currentPage: newPage,
-                pageSize: vals[2],
-                filters: vals[3],
-                grouping: vals[4],
-                expandedGroups: vals[5] ? Array.from(vals[5].values()) : [],
+                pageSize: pageSize,
+                filters: filters,
+                grouping: grouping,
+                expandedGroups: expandedGroups,
                 loading: true
+              };
+
+              if (!_lodash2.default.isEqual(_this3.state.grouping, grouping) || !_lodash2.default.isEqual(_this3.state.expandedGroups, expandedGroups)) {
+                newState.tempGrouping = _this3.state.grouping;
+                newState.tempExpandedGroups = _this3.state.expandedGroups ? Array.from(_this3.state.expandedGroups.values()) : [];
+              }
+
+              setTimeout(function () {
+                return _this3.setState(newState);
               });
-              if (newPage !== vals[1]) action('setCurrentPage')(newPage);
+
+              if (newPage !== currentPage) actions.setCurrentPage(newPage);
+
+              return [];
             }
           }),
-          _react2.default.createElement(_dxReactCore.Getter, { name: 'isGroupRow', value: function value(row) {
-              return row.type === 'group';
-            } }),
           _react2.default.createElement(_dxReactCore.Getter, { name: 'totalCount', value: this.getTotalCount() }),
           _react2.default.createElement(_dxReactCore.Getter, { name: 'rows', value: this.getRows() }),
+          _react2.default.createElement(_dxReactGrid.CustomGrouping, {
+            getChildGroups: this.getChildGroups,
+            grouping: this.state.tempGrouping,
+            expandedGroups: this.state.tempExpandedGroups
+          }),
           _react2.default.createElement(_dxReactCore.Getter, { name: 'loading', value: this.state.loading }),
           _react2.default.createElement(_dxReactCore.Getter, {
             name: 'totalPages',
-            computed: function computed(getters) {
-              return getters.pageSize > 0 ? Math.ceil(getters.totalCount / getters.pageSize) : getters.totalCount > 0 ? 1 : 0;
+            computed: function computed(_ref2) {
+              var pageSize = _ref2.pageSize,
+                  totalCount = _ref2.totalCount;
+              return pageSize > 0 ? Math.ceil(totalCount / pageSize) : totalCount > 0 ? 1 : 0;
             }
           }),
-          _react2.default.createElement(_dxReactCore.Watcher, {
-            watch: function watch(getter) {
-              return [getter('totalPages'), getter('currentPage')];
-            },
-            onChange: function onChange(action, totalPages, currentPage) {
-              if (totalPages > 0 && totalPages - 1 < currentPage) action('setCurrentPage')(Math.max(totalPages - 1, 0));
+          _react2.default.createElement(_dxReactCore.Getter, {
+            name: 'currentPage',
+            computed: function computed(_ref3, actions) {
+              var currentPage = _ref3.currentPage,
+                  totalPages = _ref3.totalPages;
+
+              if (totalPages > 0 && totalPages - 1 < currentPage) actions.setCurrentPage(Math.max(totalPages - 1, 0));
+              return currentPage;
             }
           }),
           _react2.default.createElement(
@@ -355,11 +395,23 @@ module.exports = __WEBPACK_EXTERNAL_MODULE_3__;
 
 /***/ }),
 /* 4 */
+/***/ (function(module, exports) {
+
+module.exports = __WEBPACK_EXTERNAL_MODULE_4__;
+
+/***/ }),
+/* 5 */
+/***/ (function(module, exports) {
+
+module.exports = __WEBPACK_EXTERNAL_MODULE_5__;
+
+/***/ }),
+/* 6 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;(function (global, factory) {
   if (true) {
-    !(__WEBPACK_AMD_DEFINE_ARRAY__ = [exports, __webpack_require__(5)], __WEBPACK_AMD_DEFINE_FACTORY__ = (factory),
+    !(__WEBPACK_AMD_DEFINE_ARRAY__ = [exports, __webpack_require__(7)], __WEBPACK_AMD_DEFINE_FACTORY__ = (factory),
 				__WEBPACK_AMD_DEFINE_RESULT__ = (typeof __WEBPACK_AMD_DEFINE_FACTORY__ === 'function' ?
 				(__WEBPACK_AMD_DEFINE_FACTORY__.apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__)) : __WEBPACK_AMD_DEFINE_FACTORY__),
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
@@ -473,7 +525,7 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_
       var _marked = [generateContentQueries, generateRows].map(regeneratorRuntime.mark);
 
       var isExpanded = function isExpanded(groupKey) {
-        return loadOptions.expandedGroups.includes(groupKey);
+        return loadOptions.expandedGroups.has(groupKey);
       };
       var furtherGroupLevels = function furtherGroupLevels(groupLevel) {
         return groupLevel + 1 < loadOptions.grouping.length;
@@ -504,14 +556,14 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_
           while (1) {
             switch (_context.prev = _context.next) {
               case 0:
-                countRows = function countRows(c, rowsParent) {
+                countRows = function countRows(c, hasRowsParent) {
                   for (var i = 0; i < c; i++) {
-                    countRow(rowsParent);
+                    countRow(hasRowsParent);
                   }
                 };
 
-                countRow = function countRow(rowsParent) {
-                  if (rowsParent && isPageBoundary(cqTotalCount)) cqTotalCount++;
+                countRow = function countRow(hasRowsParent) {
+                  if (hasRowsParent && isPageBoundary(cqTotalCount)) cqTotalCount++;
 
                   cqTotalCount++;
                 };
@@ -537,7 +589,7 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_
 
                 group = _step.value;
 
-                countRow(parentGroupKey);
+                countRow(!!parentGroupKey);
                 groupKey = (parentGroupKey ? parentGroupKey + '|' : '') + group.key;
 
                 if (!isExpanded(groupKey)) {
@@ -573,7 +625,7 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_
                 };
 
               case 20:
-                countRows(group.count, group);
+                countRows(group.count, !!group);
 
               case 21:
                 _iteratorNormalCompletion = true;
@@ -645,7 +697,7 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_
                       switch (_context3.prev = _context3.next) {
                         case 0:
                           cd = contentData.find(function (c) {
-                            return c.groupKey === groupRow.key;
+                            return c.groupKey === groupRow.fullKey;
                           });
 
                           if (!cd) {
@@ -737,8 +789,8 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_
 
                 createGroupRow = function createGroupRow(group) {
                   return {
-                    _headerKey: 'groupRow_' + loadOptions.grouping[groupLevel].columnName,
-                    key: (parentGroupRow ? parentGroupRow.key + '|' : '') + ('' + group.key),
+                    fullKey: (parentGroupRow ? parentGroupRow.fullKey + '|' : '') + ('' + group.key),
+                    key: '' + group.key,
                     groupedBy: loadOptions.grouping[groupLevel].columnName,
                     value: group.key,
                     type: 'groupRow'
@@ -810,7 +862,7 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_
                 return _context4.delegateYield(yieldRow(groupRow, parentGroupRow), 't0', 13);
 
               case 13:
-                if (!isExpanded(groupRow.key)) {
+                if (!isExpanded(groupRow.fullKey)) {
                   _context4.next = 19;
                   break;
                 }
@@ -955,27 +1007,27 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_
 });
 
 /***/ }),
-/* 5 */
+/* 7 */
 /***/ (function(module, exports) {
 
-module.exports = __WEBPACK_EXTERNAL_MODULE_5__;
+module.exports = __WEBPACK_EXTERNAL_MODULE_7__;
 
 /***/ }),
-/* 6 */
+/* 8 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // style-loader: Adds some css to the DOM by adding a <style> tag
 
 // load the styles
-var content = __webpack_require__(7);
+var content = __webpack_require__(9);
 if(typeof content === 'string') content = [[module.i, content, '']];
 // Prepare cssTransformation
 var transform;
 
-var options = {}
+var options = {"hmr":true}
 options.transform = transform
 // add the styles to the DOM
-var update = __webpack_require__(9)(content, options);
+var update = __webpack_require__(11)(content, options);
 if(content.locals) module.exports = content.locals;
 // Hot Module Replacement
 if(false) {
@@ -992,10 +1044,10 @@ if(false) {
 }
 
 /***/ }),
-/* 7 */
+/* 9 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports = module.exports = __webpack_require__(8)(undefined);
+exports = module.exports = __webpack_require__(10)(undefined);
 // imports
 
 
@@ -1006,7 +1058,7 @@ exports.push([module.i, ".loading-shading {\n    position: absolute;\n    top: 0
 
 
 /***/ }),
-/* 8 */
+/* 10 */
 /***/ (function(module, exports) {
 
 /*
@@ -1088,7 +1140,7 @@ function toComment(sourceMap) {
 
 
 /***/ }),
-/* 9 */
+/* 11 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /*
@@ -1121,9 +1173,19 @@ var getElement = (function (fn) {
 
 	return function(selector) {
 		if (typeof memo[selector] === "undefined") {
-			memo[selector] = fn.call(this, selector);
+			var styleTarget = fn.call(this, selector);
+			// Special case to return head of iframe instead of iframe itself
+			if (styleTarget instanceof window.HTMLIFrameElement) {
+				try {
+					// This will throw an exception if access to iframe is blocked
+					// due to cross-origin restrictions
+					styleTarget = styleTarget.contentDocument.head;
+				} catch(e) {
+					styleTarget = null;
+				}
+			}
+			memo[selector] = styleTarget;
 		}
-
 		return memo[selector]
 	};
 })(function (target) {
@@ -1134,7 +1196,7 @@ var singleton = null;
 var	singletonCounter = 0;
 var	stylesInsertedAtTop = [];
 
-var	fixUrls = __webpack_require__(10);
+var	fixUrls = __webpack_require__(12);
 
 module.exports = function(list, options) {
 	if (typeof DEBUG !== "undefined" && DEBUG) {
@@ -1253,8 +1315,11 @@ function insertStyleElement (options, style) {
 		stylesInsertedAtTop.push(style);
 	} else if (options.insertAt === "bottom") {
 		target.appendChild(style);
+	} else if (typeof options.insertAt === "object" && options.insertAt.before) {
+		var nextSibling = getElement(options.insertInto + " " + options.insertAt.before);
+		target.insertBefore(style, nextSibling);
 	} else {
-		throw new Error("Invalid value for parameter 'insertAt'. Must be 'top' or 'bottom'.");
+		throw new Error("[Style Loader]\n\n Invalid value for parameter 'insertAt' ('options.insertAt') found.\n Must be 'top', 'bottom', or Object.\n (https://github.com/webpack-contrib/style-loader#insertat)\n");
 	}
 }
 
@@ -1447,7 +1512,7 @@ function updateLink (link, options, obj) {
 
 
 /***/ }),
-/* 10 */
+/* 12 */
 /***/ (function(module, exports) {
 
 

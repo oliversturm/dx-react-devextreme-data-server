@@ -83,8 +83,10 @@ const createDataFetcher = (BASEDATA = DEFAULTBASEDATA) => {
   });
 
   const createGroupQueryData = (data, loadOptions) => {
-    const isExpanded = groupKey =>
-      loadOptions.expandedGroups.includes(groupKey);
+    const isExpanded = groupKey => {
+      //console.log('Testing groupKey for expanded: ', groupKey);
+      return loadOptions.expandedGroups.has(groupKey);
+    };
     const furtherGroupLevels = groupLevel =>
       groupLevel + 1 < loadOptions.grouping.length;
 
@@ -92,12 +94,12 @@ const createDataFetcher = (BASEDATA = DEFAULTBASEDATA) => {
     let totalCount = 0;
     // page range: if totalCount is >= pageRangeStart and < pageRangeEnd
     // *before* the yield, then we yield
-    const pageRangeStart = loadOptions.currentPage >= 0 && loadOptions.pageSize
-      ? loadOptions.currentPage * loadOptions.pageSize
-      : undefined;
-    const pageRangeEnd = pageRangeStart >= 0
-      ? pageRangeStart + loadOptions.pageSize
-      : undefined;
+    const pageRangeStart =
+      loadOptions.currentPage >= 0 && loadOptions.pageSize
+        ? loadOptions.currentPage * loadOptions.pageSize
+        : undefined;
+    const pageRangeEnd =
+      pageRangeStart >= 0 ? pageRangeStart + loadOptions.pageSize : undefined;
 
     function countInPageRange(count) {
       return pageRangeStart >= 0
@@ -128,23 +130,23 @@ const createDataFetcher = (BASEDATA = DEFAULTBASEDATA) => {
         ];
       }
 
-      function countRow(rowsParent) {
+      function countRow(hasRowsParent) {
         // represents yielding a cont row
-        if (rowsParent && isPageBoundary(cqTotalCount)) cqTotalCount++;
+        if (hasRowsParent && isPageBoundary(cqTotalCount)) cqTotalCount++;
         // yielding the row itself
         cqTotalCount++;
       }
 
-      function countRows(c, rowsParent) {
-        for (let i = 0; i < c; i++)
-          countRow(rowsParent);
+      function countRows(c, hasRowsParent) {
+        for (let i = 0; i < c; i++) countRow(hasRowsParent);
       }
 
       for (let group of list) {
-        countRow(parentGroupKey);
+        countRow(!!parentGroupKey);
         const groupKey =
           (parentGroupKey ? `${parentGroupKey}|` : '') + group.key;
         if (isExpanded(groupKey)) {
+          //console.log('Found expanded group: ', groupKey);
           if (furtherGroupLevels(groupLevel))
             yield* generateContentQueries(
               group.items,
@@ -162,7 +164,7 @@ const createDataFetcher = (BASEDATA = DEFAULTBASEDATA) => {
                   filters: loadOptions.filters.concat(getParentFilters(group))
                 })
               };
-            countRows(group.count, group);
+            countRows(group.count, !!group);
           }
         }
       }
@@ -196,9 +198,14 @@ const createDataFetcher = (BASEDATA = DEFAULTBASEDATA) => {
 
       function createGroupRow(group) {
         return {
-          _headerKey: `groupRow_${loadOptions.grouping[groupLevel].columnName}`,
-          key: (parentGroupRow ? `${parentGroupRow.key}|` : '') +
+          // With CustomGrouping, the key needs to be just the group key
+          // itself, no longer the full key that contains parent elements.
+          // However, we need the parent part as well, because it's used
+          // to look up separately loaded group data.
+          fullKey:
+            (parentGroupRow ? `${parentGroupRow.fullKey}|` : '') +
             `${group.key}`,
+          key: `${group.key}`,
           groupedBy: loadOptions.grouping[groupLevel].columnName,
           value: group.key,
           type: 'groupRow'
@@ -206,21 +213,23 @@ const createDataFetcher = (BASEDATA = DEFAULTBASEDATA) => {
       }
 
       function* getGroupContent(groupRow, contentData, itemCount) {
-        const cd = contentData.find(c => c.groupKey === groupRow.key);
+        // console.log(
+        //   `getGroupContent with key ${groupRow.fullKey}, contentData`,
+        //   contentData
+        // );
+        const cd = contentData.find(c => c.groupKey === groupRow.fullKey);
         if (cd) {
           // optimization idea: only query as many content records
           // as will fit on the page, then yield dummy rows for the
           // remainder - currently I'm still doing a full query for
           // content, even if part of it won't be visible.
-          for (let row of cd.content)
-            yield* yieldRow(row, groupRow);
+          for (let row of cd.content) yield* yieldRow(row, groupRow);
         } else {
           // no content found for this expanded group means no
           // query was run, which means that this group content
           // is not visible on the current page
           // to count properly, I'll just yield dummy rows instead
-          for (let i = 0; i < itemCount; i++)
-            yield* yieldRow(null, groupRow);
+          for (let i = 0; i < itemCount; i++) yield* yieldRow(null, groupRow);
         }
       }
 
@@ -230,7 +239,7 @@ const createDataFetcher = (BASEDATA = DEFAULTBASEDATA) => {
         yield* yieldRow(groupRow, parentGroupRow);
 
         // Is the group expanded?
-        if (isExpanded(groupRow.key)) {
+        if (isExpanded(groupRow.fullKey)) {
           // Are there further group levels?
           if (furtherGroupLevels(groupLevel)) {
             yield* generateRows(
@@ -281,6 +290,21 @@ const createDataFetcher = (BASEDATA = DEFAULTBASEDATA) => {
       }));
   };
 
+  // Algorithm for group queries:
+  // - construct query url with group parameters, setting all groups to
+  //   isExpanded false (so no detail data will be returned), and
+  //   skip and take to undefined (I'm not completely sure why this is
+  //   important - perhaps it could be optimized) (createQueryURL)
+  // - query data on query url, this returns all groups on all levels
+  // - generate content queries by iterating over group list, counting rows
+  //   required per group, taking into account page size and current page,
+  //   and yielding simple query URLs for the groups that are visible at
+  //   least partly on the current page (createContentQueries)
+  // - execute the detail queries (getContentData)
+  // - (generateRows) Iterate group data recursively, counting carefully
+  //   the number of rows actually yielded (yieldRow). Data from the detail
+  //   queries is pulled from the result sets at the right point (getGroupContent)
+
   const groupQuery = (queryUrl, loadOptions) => {
     return fetch(queryUrl)
       .then(response => response.json())
@@ -306,7 +330,8 @@ const createDataFetcher = (BASEDATA = DEFAULTBASEDATA) => {
 
       (loadOptions.grouping && loadOptions.grouping.length > 0
         ? groupQuery(queryUrl, loadOptions)
-        : simpleQuery(queryUrl)).then(result => resolve(result));
+        : simpleQuery(queryUrl)
+      ).then(result => resolve(result));
     });
   };
 };

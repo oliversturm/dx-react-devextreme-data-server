@@ -3,11 +3,14 @@ import PropTypes from 'prop-types';
 
 import {
   Getter,
-  Watcher,
   Template,
   TemplatePlaceholder,
   PluginContainer
 } from '@devexpress/dx-react-core';
+
+import { CustomGrouping } from '@devexpress/dx-react-grid';
+
+import _ from 'lodash';
 
 import './loading.css';
 
@@ -65,10 +68,38 @@ class DevExtremeDataServer extends React.PureComponent {
           loadResult: {
             rows: res.data.rows,
             totalCount: res.data.totalCount
-          }
+          },
+          tempGrouping: null,
+          tempExpandedGroups: null
         });
       }
     });
+  }
+
+  getChildGroups(currentRows, grouping) {
+    //console.log('getChildGroups with currentRows: ', currentRows);
+    if (currentRows.length === 0 || currentRows[0].type !== 'groupRow') {
+      // In spite of the efforts with the temp bindings to CustomGrouping.grouping
+      // and CustomGrouping.expandedGroups, I still receive a call to this function
+      // right after grouping is first established, where the rows passed are
+      // the wrong (i.e. non-grouping) format and can't be processed. I can
+      // ignore this easily enough, but it is unclear to me why this happens
+      // or whether there isn't a way to prevent it.
+      //
+      // console.error(
+      //   'getChildGroups: Got data in wrong format, returning without result.'
+      // );
+      return [];
+    }
+    return currentRows.reduce((acc, row) => {
+      //console.log('Handling row with grouping: ', [row, grouping]);
+      if (row.type === 'groupRow' && row.groupedBy === grouping.columnName) {
+        acc.push({ key: row.key, value: row.value, childRows: [] });
+      } else {
+        acc[acc.length - 1].childRows.push(row);
+      }
+      return acc;
+    }, []);
   }
 
   getLoadOptions() {
@@ -99,55 +130,80 @@ class DevExtremeDataServer extends React.PureComponent {
       prevState.grouping !== this.state.grouping ||
       prevState.expandedGroups !== this.state.expandedGroups ||
       prevProps.reloadState !== this.props.reloadState
-    )
+    ) {
       this.getData(this.getLoadOptions());
+    } //else console.log('Component updated, but no relevant state changes');
   }
 
   render() {
     return (
       <PluginContainer>
-        <Watcher
-          watch={getter =>
-            [
-              'sorting',
-              'currentPage',
-              'pageSize',
-              'filters',
-              'grouping',
-              'expandedGroups'
-            ].map(getter)}
-          onChange={(action, ...vals) => {
+        <Getter
+          name="rows"
+          computed={(
+            {
+              sorting,
+              currentPage,
+              pageSize,
+              filters,
+              grouping,
+              expandedGroups
+            },
+            actions
+          ) => {
             // For initialization, state.pageSize will be undefined.
             // Just use the new value then.
-            const oldPageSize = this.state.pageSize || vals[2];
+            const oldPageSize = this.state.pageSize || pageSize;
 
             const newPage = (() => {
-              if (oldPageSize !== vals[2])
+              if (oldPageSize !== pageSize)
                 // pageSize has changed. Calculate new currentPage
                 // for new pageSize > 0, otherwise currentPage will be 0.
-                return vals[2] > 0
-                  ? Math.trunc(vals[1] * oldPageSize / vals[2])
+                return pageSize > 0
+                  ? Math.trunc(currentPage * oldPageSize / pageSize)
                   : 0;
               else
                 // pageSize hasn't changed, use given currentPage
-                return vals[1];
+                return currentPage;
             })();
 
-            this.setState({
-              sorting: vals[0],
+            const newState = {
+              sorting,
               currentPage: newPage,
-              pageSize: vals[2],
-              filters: vals[3],
-              grouping: vals[4],
-              expandedGroups: vals[5] ? Array.from(vals[5].values()) : [],
+              pageSize,
+              filters,
+              grouping,
+              expandedGroups,
               loading: true
-            });
-            if (newPage !== vals[1]) action('setCurrentPage')(newPage);
+            };
+
+            if (
+              !_.isEqual(this.state.grouping, grouping) ||
+              !_.isEqual(this.state.expandedGroups, expandedGroups)
+            ) {
+              newState.tempGrouping = this.state.grouping;
+              newState.tempExpandedGroups = this.state.expandedGroups
+                ? Array.from(this.state.expandedGroups.values())
+                : [];
+            }
+
+            // using setTimeout to prevent React from complaining
+            // about state change during state change
+            setTimeout(() => this.setState(newState));
+
+            if (newPage !== currentPage) actions.setCurrentPage(newPage);
+
+            return [];
           }}
         />
-        <Getter name="isGroupRow" value={row => row.type === 'group'} />
+
         <Getter name="totalCount" value={this.getTotalCount()} />
         <Getter name="rows" value={this.getRows()} />
+        <CustomGrouping
+          getChildGroups={this.getChildGroups}
+          grouping={this.state.tempGrouping}
+          expandedGroups={this.state.tempExpandedGroups}
+        />
         <Getter name="loading" value={this.state.loading} />
         {
           // The following getter is used to change the logic
@@ -157,23 +213,24 @@ class DevExtremeDataServer extends React.PureComponent {
         }
         <Getter
           name="totalPages"
-          computed={getters =>
-            getters.pageSize > 0
-              ? Math.ceil(getters.totalCount / getters.pageSize)
-              : getters.totalCount > 0 ? 1 : 0}
+          computed={({ pageSize, totalCount }) =>
+            pageSize > 0
+              ? Math.ceil(totalCount / pageSize)
+              : totalCount > 0 ? 1 : 0}
         />
         {
           // make sure that when totalPages changes, currentPage remains
           // in range
+          // If totalPages is 0, we don't do anything - this is
+          // assuming that there is no data *yet* and we don't want
+          // to lose the previous currentPage state.
         }
-        <Watcher
-          watch={getter => [getter('totalPages'), getter('currentPage')]}
-          onChange={(action, totalPages, currentPage) => {
-            // If totalPages is 0, we don't do anything - this is
-            // assuming that there is no data *yet* and we don't want
-            // to lose the previous currentPage state.
+        <Getter
+          name="currentPage"
+          computed={({ currentPage, totalPages }, actions) => {
             if (totalPages > 0 && totalPages - 1 < currentPage)
-              action('setCurrentPage')(Math.max(totalPages - 1, 0));
+              actions.setCurrentPage(Math.max(totalPages - 1, 0));
+            return currentPage;
           }}
         />
         <Template name="root">

@@ -82,7 +82,9 @@
     });
 
     const createGroupQueryData = (data, loadOptions) => {
-      const isExpanded = groupKey => loadOptions.expandedGroups.includes(groupKey);
+      const isExpanded = groupKey => {
+        return loadOptions.expandedGroups.has(groupKey);
+      };
       const furtherGroupLevels = groupLevel => groupLevel + 1 < loadOptions.grouping.length;
 
       let cqTotalCount = 0;
@@ -107,18 +109,18 @@
           }];
         }
 
-        function countRow(rowsParent) {
-          if (rowsParent && isPageBoundary(cqTotalCount)) cqTotalCount++;
+        function countRow(hasRowsParent) {
+          if (hasRowsParent && isPageBoundary(cqTotalCount)) cqTotalCount++;
 
           cqTotalCount++;
         }
 
-        function countRows(c, rowsParent) {
-          for (let i = 0; i < c; i++) countRow(rowsParent);
+        function countRows(c, hasRowsParent) {
+          for (let i = 0; i < c; i++) countRow(hasRowsParent);
         }
 
         for (let group of list) {
-          countRow(parentGroupKey);
+          countRow(!!parentGroupKey);
           const groupKey = (parentGroupKey ? `${parentGroupKey}|` : '') + group.key;
           if (isExpanded(groupKey)) {
             if (furtherGroupLevels(groupLevel)) yield* generateContentQueries(group.items, groupLevel + 1, groupKey, getParentFilters(group));else {
@@ -130,7 +132,7 @@
                   filters: loadOptions.filters.concat(getParentFilters(group))
                 })
               };
-              countRows(group.count, group);
+              countRows(group.count, !!group);
             }
           }
         }
@@ -159,8 +161,8 @@
 
         function createGroupRow(group) {
           return {
-            _headerKey: `groupRow_${loadOptions.grouping[groupLevel].columnName}`,
-            key: (parentGroupRow ? `${parentGroupRow.key}|` : '') + `${group.key}`,
+            fullKey: (parentGroupRow ? `${parentGroupRow.fullKey}|` : '') + `${group.key}`,
+            key: `${group.key}`,
             groupedBy: loadOptions.grouping[groupLevel].columnName,
             value: group.key,
             type: 'groupRow'
@@ -168,7 +170,7 @@
         }
 
         function* getGroupContent(groupRow, contentData, itemCount) {
-          const cd = contentData.find(c => c.groupKey === groupRow.key);
+          const cd = contentData.find(c => c.groupKey === groupRow.fullKey);
           if (cd) {
             for (let row of cd.content) yield* yieldRow(row, groupRow);
           } else {
@@ -180,7 +182,7 @@
           const groupRow = createGroupRow(group);
           yield* yieldRow(groupRow, parentGroupRow);
 
-          if (isExpanded(groupRow.key)) {
+          if (isExpanded(groupRow.fullKey)) {
             if (furtherGroupLevels(groupLevel)) {
               yield* generateRows(group.items, contentData, groupLevel + 1, groupRow);
             } else {
