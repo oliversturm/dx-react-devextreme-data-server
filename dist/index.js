@@ -154,7 +154,7 @@
               newState.tempExpandedGroups = this.state.expandedGroups ? Array.from(this.state.expandedGroups.values()) : [];
             }
 
-            setTimeout(() => this.setState(newState));
+            this.setState(newState);
 
             if (newPage !== currentPage) actions.setCurrentPage(newPage);
 

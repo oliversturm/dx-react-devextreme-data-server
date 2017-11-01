@@ -304,9 +304,7 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_
                 newState.tempExpandedGroups = _this3.state.expandedGroups ? Array.from(_this3.state.expandedGroups.values()) : [];
               }
 
-              setTimeout(function () {
-                return _this3.setState(newState);
-              });
+              _this3.setState(newState);
 
               if (newPage !== currentPage) actions.setCurrentPage(newPage);
 
