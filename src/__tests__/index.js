@@ -165,4 +165,89 @@ describe('data access library', function() {
       assert.deepEqual(getGroupParams({}), {});
     });
   });
+
+  describe('createGroupQueryDataGenerator', function() {
+    const { createGroupQueryDataGenerator } = fetchData.testing;
+
+    describe('page range values', function() {
+      it('pageRangeStart', function() {
+        assert.equal(
+          createGroupQueryDataGenerator(null, { pageSize: 10, currentPage: 3 })
+            .testing.pageRangeStart,
+          30
+        );
+      });
+
+      it('pageRangeEnd', function() {
+        assert.equal(
+          createGroupQueryDataGenerator(null, { pageSize: 10, currentPage: 3 })
+            .testing.pageRangeEnd,
+          40
+        );
+      });
+
+      it('special case for invalid params', function() {
+        const {
+          pageRangeStart,
+          pageRangeEnd
+        } = createGroupQueryDataGenerator(null, {
+          pageSize: 10,
+          currentPage: undefined
+        }).testing;
+        assert.isUndefined(pageRangeStart);
+        assert.isUndefined(pageRangeEnd);
+      });
+    });
+
+    describe('countInPageRange', function() {
+      const { countInPageRange } = createGroupQueryDataGenerator(null, {
+        pageSize: 10,
+        currentPage: 3
+      }).testing;
+
+      it('finds count in range', function() {
+        assert.isTrue(countInPageRange(32));
+      });
+
+      it('finds count outside of range', function() {
+        assert.isFalse(countInPageRange(17));
+      });
+
+      it('has a special case for an undefined page range start', function() {
+        // I don't remember what the point of this special case is, but
+        // I clearly did it this way on purpose.
+        const {
+          countInPageRange: countInPageRange_
+        } = createGroupQueryDataGenerator(null, {
+          pageSize: 10,
+          currentPage: undefined
+        }).testing;
+        assert.isTrue(countInPageRange_(3));
+        assert.isTrue(countInPageRange_(-3));
+        assert.isTrue(countInPageRange_(32));
+        assert.isTrue(countInPageRange_(9999));
+      });
+    });
+
+    describe('groupContentOverlapsPageRange', function() {
+      const {
+        groupContentOverlapsPageRange
+      } = createGroupQueryDataGenerator(null, {
+        pageSize: 10,
+        currentPage: 3
+      }).testing;
+
+      it('finds overlap', function() {
+        assert.isTrue(groupContentOverlapsPageRange(36, 10));
+        assert.isTrue(groupContentOverlapsPageRange(32, 3));
+        assert.isTrue(groupContentOverlapsPageRange(27, 10));
+        assert.isTrue(groupContentOverlapsPageRange(27, 20));
+      });
+
+      it('finds no overlap', function() {
+        assert.isFalse(groupContentOverlapsPageRange(42, 10));
+        assert.isFalse(groupContentOverlapsPageRange(17, 10));
+      });
+    });
+  });
 });
