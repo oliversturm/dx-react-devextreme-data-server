@@ -40,6 +40,8 @@ const createDataFetcher = (BASEDATA = DEFAULTBASEDATA) => {
             isExpanded: false
           })),
           requireGroupCount: true,
+          // skip and take override any previous settings when
+          // these params are combined with others
           skip: undefined,
           take: undefined // always query all groups
         }
