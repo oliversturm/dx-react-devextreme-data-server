@@ -1,60 +1,71 @@
-import React from 'react';
+import { assert } from 'chai';
+import { describe, it } from 'mocha';
+import { DevExtremeDataServer } from '../index';
 
-import {shallow, mount, render} from 'enzyme';
-import {expect} from 'chai';
-import sinon from 'sinon';
-
-import MyComponent from '../index';
-
-// Demo tests
-
-// Shallow Rendering
-// https://github.com/airbnb/enzyme/blob/master/docs/api/shallow.md
-describe('Shallow Rendering', () => {
-
-    it('to have three `.icon-test`s', () => {
-        const wrapper = shallow(<MyComponent />);
-        expect(wrapper.find('.icon-test')).to.have.length(3);
+describe('DevExtremeDataServer', function() {
+  describe('getChildGroups', function() {
+    it('refuses to do any work with an empty list', function() {
+      const server = new DevExtremeDataServer({});
+      const result = server.getChildGroups([], { columnName: 'test' });
+      assert.deepEqual(result, []);
     });
 
-    it('simulates click events', () => {
-        const buttonClick = sinon.spy();
-        const wrapper = shallow(
-          <MyComponent handleClick={buttonClick} />
-        );
-        wrapper.find('button').simulate('click');
-        expect(buttonClick.calledOnce).to.equal(true);
+    it('returns an empty list for wrong structure', function() {
+      const server = new DevExtremeDataServer({});
+      const result = server.getChildGroups(
+        [{ intval: 3, strval: 'txt3' }, { intval: 4, strval: 'txt4' }],
+        { columnName: 'test' }
+      );
+      assert.deepEqual(result, []);
     });
 
-});
+    it('does its thing correctly', function() {
+      const server = new DevExtremeDataServer({});
+      const rows = [
+        { type: 'groupRow', groupedBy: 'field1', key: 1, value: 'group 1' },
+        { intval: 3, strval: 'txt3' },
+        { intval: 4, strval: 'txt4' },
+        { type: 'groupRow', groupedBy: 'field1', key: 2, value: 'group 2' },
+        { type: 'groupRow', groupedBy: 'field2', key: 21, value: 'subgroup 1' },
+        { intval: 5, strval: 'txt5' }
+      ];
+      const groupsLevel1 = server.getChildGroups(rows, {
+        columnName: 'field1'
+      });
+      assert.deepEqual(groupsLevel1, [
+        {
+          key: 1,
+          value: 'group 1',
+          childRows: [
+            { intval: 3, strval: 'txt3' },
+            { intval: 4, strval: 'txt4' }
+          ]
+        },
+        {
+          key: 2,
+          value: 'group 2',
+          childRows: [
+            {
+              type: 'groupRow',
+              groupedBy: 'field2',
+              key: 21,
+              value: 'subgroup 1'
+            },
+            { intval: 5, strval: 'txt5' }
+          ]
+        }
+      ]);
 
-// Full DOM Rendering
-// https://github.com/airbnb/enzyme/blob/master/docs/api/mount.md
-describe('Full DOM Rendering', () => {
-
-    it('allows us to set props', () => {
-        const wrapper = mount(<MyComponent bar='baz' />);
-        expect(wrapper.props().bar).to.equal('baz');
-        wrapper.setProps({ bar: 'foo' });
-        expect(wrapper.props().bar).to.equal('foo');
+      const groupsLevel2 = server.getChildGroups(groupsLevel1[1].childRows, {
+        columnName: 'field2'
+      });
+      assert.deepEqual(groupsLevel2, [
+        {
+          key: 21,
+          value: 'subgroup 1',
+          childRows: [{ intval: 5, strval: 'txt5' }]
+        }
+      ]);
     });
-
-    it('calls componentDidMount', () => {
-        sinon.spy(MyComponent.prototype, 'componentDidMount');
-        const wrapper = mount(<MyComponent />);
-        expect(MyComponent.prototype.componentDidMount.calledOnce).to.be.true;
-        MyComponent.prototype.componentDidMount.restore();
-    });
-
-});
-
-// Static Rendered Markup
-// https://github.com/airbnb/enzyme/blob/master/docs/api/render.md
-describe('Static Rendered Markup', () => {
-
-    it('renders three `.icon-test`s', () => {
-        const wrapper = render(<MyComponent />);
-        expect(wrapper.find('.icon-test').length).to.equal(3);
-    });
-
+  });
 });

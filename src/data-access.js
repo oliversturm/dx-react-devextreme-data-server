@@ -57,7 +57,7 @@ const createDataFetcher = (BASEDATA = DEFAULTBASEDATA) => {
       }
     ]);
 
-    console.log('Created params: ', params);
+    //console.log('Created params: ', params);
 
     const query = qs.stringify(params, {
       arrayFormat: 'indices'
@@ -70,7 +70,7 @@ const createDataFetcher = (BASEDATA = DEFAULTBASEDATA) => {
     totalCount: data.totalCount
   });
 
-  const createGroupQueryData = (data, loadOptions) => {
+  const createGroupQueryDataGenerator = (data, loadOptions) => {
     const isExpanded = groupKey => {
       //console.log('Testing groupKey for expanded: ', groupKey);
       return loadOptions.expandedGroups.has(groupKey);
@@ -89,34 +89,30 @@ const createDataFetcher = (BASEDATA = DEFAULTBASEDATA) => {
     const pageRangeEnd =
       pageRangeStart >= 0 ? pageRangeStart + loadOptions.pageSize : undefined;
 
-    function countInPageRange(count) {
-      return pageRangeStart >= 0
+    const countInPageRange = count =>
+      pageRangeStart >= 0
         ? count >= pageRangeStart && count < pageRangeEnd
         : true;
-    }
 
-    function groupContentOverlapsPageRange(groupStart, groupLength) {
-      return pageRangeStart >= 0
+    const groupContentOverlapsPageRange = (groupStart, groupLength) =>
+      pageRangeStart >= 0
         ? groupStart < pageRangeEnd &&
-            groupStart + groupLength >= pageRangeStart
+          groupStart + groupLength >= pageRangeStart
         : true;
-    }
 
-    function* generateContentQueries(
+    function contentQueriesGenerator(
       list,
       groupLevel = 0,
       parentGroupKey,
       parentFilters = []
     ) {
-      function getParentFilters(group) {
-        return [
-          ...parentFilters,
-          {
-            columnName: loadOptions.grouping[groupLevel].columnName,
-            value: group.key
-          }
-        ];
-      }
+      const getParentFilters = group => [
+        ...parentFilters,
+        {
+          columnName: loadOptions.grouping[groupLevel].columnName,
+          value: group.key
+        }
+      ];
 
       function countRow(hasRowsParent) {
         // represents yielding a cont row
@@ -129,33 +125,41 @@ const createDataFetcher = (BASEDATA = DEFAULTBASEDATA) => {
         for (let i = 0; i < c; i++) countRow(hasRowsParent);
       }
 
-      for (let group of list) {
-        countRow(!!parentGroupKey);
-        const groupKey =
-          (parentGroupKey ? `${parentGroupKey}|` : '') + group.key;
-        if (isExpanded(groupKey)) {
-          //console.log('Found expanded group: ', groupKey);
-          if (furtherGroupLevels(groupLevel))
-            yield* generateContentQueries(
-              group.items,
-              groupLevel + 1,
-              groupKey,
-              getParentFilters(group)
-            );
-          else {
-            if (groupContentOverlapsPageRange(cqTotalCount, group.count))
-              yield {
+      const result = function*() {
+        for (let group of list) {
+          countRow(!!parentGroupKey);
+          const groupKey =
+            (parentGroupKey ? `${parentGroupKey}|` : '') + group.key;
+          if (isExpanded(groupKey)) {
+            //console.log('Found expanded group: ', groupKey);
+            if (furtherGroupLevels(groupLevel))
+              yield* contentQueriesGenerator(
+                group.items,
+                groupLevel + 1,
                 groupKey,
-                queryString: createQueryURL(BASEDATA, {
-                  sorting: loadOptions.sorting,
-                  // not passing paging options
-                  filters: loadOptions.filters.concat(getParentFilters(group))
-                })
-              };
-            countRows(group.count, !!group);
+                getParentFilters(group)
+              )();
+            else {
+              if (groupContentOverlapsPageRange(cqTotalCount, group.count))
+                yield {
+                  groupKey,
+                  queryString: createQueryURL(BASEDATA, {
+                    sorting: loadOptions.sorting,
+                    // not passing paging options
+                    filters: loadOptions.filters.concat(getParentFilters(group))
+                  })
+                };
+              countRows(group.count, !!group);
+            }
           }
         }
-      }
+      };
+
+      result.testing = {
+        getParentFilters
+      };
+
+      return result;
     }
 
     function isPageBoundary(count) {
@@ -163,10 +167,15 @@ const createDataFetcher = (BASEDATA = DEFAULTBASEDATA) => {
       return fraction > 0 && fraction === Math.trunc(fraction);
     }
 
-    function* generateRows(list, contentData, groupLevel = 0, parentGroupRow) {
+    function createRowsGenerator(
+      list,
+      contentData,
+      groupLevel = 0,
+      parentGroupRow
+    ) {
       function* yieldRow(row, rowsParent) {
         // rowsParent is the actual parent group row for this row -
-        // it differs from parentGroupRow on the generateRows function in
+        // it differs from parentGroupRow on the createRowsGenerator function in
         // that content rows of top-level groups have a rowsParent, but
         // no parentGroupRow.
 
@@ -221,31 +230,41 @@ const createDataFetcher = (BASEDATA = DEFAULTBASEDATA) => {
         }
       }
 
-      for (let group of list) {
-        // Top group row
-        const groupRow = createGroupRow(group);
-        yield* yieldRow(groupRow, parentGroupRow);
+      const result = function*() {
+        for (let group of list) {
+          // Top group row
+          const groupRow = createGroupRow(group);
+          yield* yieldRow(groupRow, parentGroupRow);
 
-        // Is the group expanded?
-        if (isExpanded(groupRow.fullKey)) {
-          // Are there further group levels?
-          if (furtherGroupLevels(groupLevel)) {
-            yield* generateRows(
-              group.items,
-              contentData,
-              groupLevel + 1,
-              groupRow
-            );
-          } else {
-            // Now we need to return the group content
-            yield* getGroupContent(groupRow, contentData, group.count);
+          // Is the group expanded?
+          if (isExpanded(groupRow.fullKey)) {
+            // Are there further group levels?
+            if (furtherGroupLevels(groupLevel)) {
+              yield* createRowsGenerator(
+                group.items,
+                contentData,
+                groupLevel + 1,
+                groupRow
+              )();
+            } else {
+              // Now we need to return the group content
+              yield* getGroupContent(groupRow, contentData, group.count);
+            }
           }
         }
-      }
+      };
+
+      result.testing = {
+        yieldRow,
+        createGroupRow,
+        getGroupContent
+      };
+
+      return result;
     }
 
     function getContentData(groups) {
-      const queries = Array.from(generateContentQueries(groups)).map(q =>
+      const queries = Array.from(contentQueriesGenerator(groups)()).map(q =>
         simpleQuery(q.queryString).then(res => ({
           groupKey: q.groupKey,
           content: res.dataFetched ? res.data.rows : undefined
@@ -255,17 +274,33 @@ const createDataFetcher = (BASEDATA = DEFAULTBASEDATA) => {
       return Promise.all(queries);
     }
 
-    return getContentData(data.data).then(contentData => ({
-      rows: Array.from(generateRows(data.data, contentData)),
-      totalCount
-    }));
+    const result = () =>
+      getContentData(data.data).then(contentData => ({
+        rows: Array.from(createRowsGenerator(data.data, contentData)()),
+        totalCount
+      }));
+
+    result.testing = {
+      isExpanded,
+      furtherGroupLevels,
+      pageRangeStart,
+      pageRangeEnd,
+      countInPageRange,
+      groupContentOverlapsPageRange,
+      contentQueriesGenerator,
+      isPageBoundary,
+      createRowsGenerator,
+      getContentData
+    };
+
+    return result;
   };
 
   const simpleQuery = queryUrl => {
     return fetch(queryUrl)
       .then(response => response.json())
       .then(data => {
-        console.log('Received simple data: ', data);
+        //console.log('Received simple data: ', data);
 
         return {
           dataFetched: true,
@@ -289,7 +324,7 @@ const createDataFetcher = (BASEDATA = DEFAULTBASEDATA) => {
   //   and yielding simple query URLs for the groups that are visible at
   //   least partly on the current page (createContentQueries)
   // - execute the detail queries (getContentData)
-  // - (generateRows) Iterate group data recursively, counting carefully
+  // - (createRowsGenerator) Iterate group data recursively, counting carefully
   //   the number of rows actually yielded (yieldRow). Data from the detail
   //   queries is pulled from the result sets at the right point (getGroupContent)
 
@@ -297,9 +332,12 @@ const createDataFetcher = (BASEDATA = DEFAULTBASEDATA) => {
     return fetch(queryUrl)
       .then(response => response.json())
       .then(data => {
-        console.log('Received group data: ', data);
+        //console.log('Received group data: ', data);
 
-        return createGroupQueryData(data, loadOptions).then(data => ({
+        return createGroupQueryDataGenerator(
+          data,
+          loadOptions
+        )().then(data => ({
           dataFetched: true,
           data
         }));
@@ -310,11 +348,11 @@ const createDataFetcher = (BASEDATA = DEFAULTBASEDATA) => {
       }));
   };
 
-  return loadOptions => {
+  const result = loadOptions => {
     const queryUrl = createQueryURL(BASEDATA, loadOptions);
 
-    return new Promise((resolve, reject) => {
-      console.warn('Querying (decoded): ', decodeURIComponent(queryUrl));
+    return new Promise(resolve => {
+      //console.warn('Querying (decoded): ', decodeURIComponent(queryUrl));
 
       (loadOptions.grouping && loadOptions.grouping.length > 0
         ? groupQuery(queryUrl, loadOptions)
@@ -322,6 +360,20 @@ const createDataFetcher = (BASEDATA = DEFAULTBASEDATA) => {
       ).then(result => resolve(result));
     });
   };
+
+  result.testing = {
+    getSortingParams,
+    getPagingParams,
+    getFilterParams,
+    getGroupParams,
+    createQueryURL,
+    convertSimpleQueryData,
+    createGroupQueryDataGenerator,
+    simpleQuery,
+    groupQuery
+  };
+
+  return result;
 };
 
 const fetchData = createDataFetcher();
