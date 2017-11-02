@@ -47,7 +47,7 @@
       this.getRows = this.getRows.bind(this);
       this.getTotalCount = this.getTotalCount.bind(this);
 
-      this.fetchData = (0, _dataAccess.createDataFetcher)(this.props.url);
+      this.fetchData = (0, _dataAccess.createDataFetcher)(props.url);
     }
 
     getRows() {

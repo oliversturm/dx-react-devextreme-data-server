@@ -184,7 +184,7 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_
       _this.getRows = _this.getRows.bind(_this);
       _this.getTotalCount = _this.getTotalCount.bind(_this);
 
-      _this.fetchData = (0, _dataAccess.createDataFetcher)(_this.props.url);
+      _this.fetchData = (0, _dataAccess.createDataFetcher)(props.url);
       return _this;
     }
 
@@ -476,10 +476,8 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_
     var getFilterParams = function getFilterParams(loadOptions) {
       return loadOptions.filters && loadOptions.filters.length > 0 ? {
         filter: loadOptions.filters.reduce(function (r, v) {
-          if (v.value) {
-            if (r.length > 0) r.push('and');
-            r.push([v.columnName, '=', v.columnName === 'int1' ? parseInt(v.value, 10) : v.value]);
-          }
+          if (r.length > 0) r.push('and');
+          r.push([v.columnName, '=', v.value]);
           return r;
         }, [])
       } : {};
@@ -494,6 +492,7 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_
           };
         }),
         requireGroupCount: true,
+
         skip: undefined,
         take: undefined } : {};
     };
@@ -503,8 +502,6 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_
         requireTotalCount: true,
         tzOffset: new Date().getTimezoneOffset()
       }]);
-
-      console.log('Created params: ', params);
 
       var query = _qs2.default.stringify(params, {
         arrayFormat: 'indices'
@@ -519,12 +516,11 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_
       };
     };
 
-    var createGroupQueryData = function createGroupQueryData(data, loadOptions) {
-      var _marked = [generateContentQueries, generateRows].map(regeneratorRuntime.mark);
-
+    var createGroupQueryDataGenerator = function createGroupQueryDataGenerator(data, loadOptions) {
       var isExpanded = function isExpanded(groupKey) {
         return loadOptions.expandedGroups.has(groupKey);
       };
+
       var furtherGroupLevels = function furtherGroupLevels(groupLevel) {
         return groupLevel + 1 < loadOptions.grouping.length;
       };
@@ -535,141 +531,149 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_
       var pageRangeStart = loadOptions.currentPage >= 0 && loadOptions.pageSize ? loadOptions.currentPage * loadOptions.pageSize : undefined;
       var pageRangeEnd = pageRangeStart >= 0 ? pageRangeStart + loadOptions.pageSize : undefined;
 
-      function countInPageRange(count) {
+      var countInPageRange = function countInPageRange(count) {
         return pageRangeStart >= 0 ? count >= pageRangeStart && count < pageRangeEnd : true;
-      }
+      };
 
-      function groupContentOverlapsPageRange(groupStart, groupLength) {
+      var groupContentOverlapsPageRange = function groupContentOverlapsPageRange(groupStart, groupLength) {
         return pageRangeStart >= 0 ? groupStart < pageRangeEnd && groupStart + groupLength >= pageRangeStart : true;
-      }
+      };
 
-      function generateContentQueries(list) {
+      function createContentQueriesGenerator(list) {
         var groupLevel = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
         var parentGroupKey = arguments[2];
         var parentFilters = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : [];
 
-        var getParentFilters, countRow, countRows, _iteratorNormalCompletion, _didIteratorError, _iteratorError, _iterator, _step, group, groupKey;
+        var getParentFilters = function getParentFilters(group) {
+          return [].concat(_toConsumableArray(parentFilters), [{
+            columnName: loadOptions.grouping[groupLevel].columnName,
+            value: group.key
+          }]);
+        };
 
-        return regeneratorRuntime.wrap(function generateContentQueries$(_context) {
-          while (1) {
-            switch (_context.prev = _context.next) {
-              case 0:
-                countRows = function countRows(c, hasRowsParent) {
-                  for (var i = 0; i < c; i++) {
-                    countRow(hasRowsParent);
-                  }
-                };
+        function countRow(hasRowsParent) {
+          if (hasRowsParent && isPageBoundary(cqTotalCount)) cqTotalCount++;
 
-                countRow = function countRow(hasRowsParent) {
-                  if (hasRowsParent && isPageBoundary(cqTotalCount)) cqTotalCount++;
+          cqTotalCount++;
+        }
 
-                  cqTotalCount++;
-                };
-
-                getParentFilters = function getParentFilters(group) {
-                  return [].concat(_toConsumableArray(parentFilters), [{
-                    columnName: loadOptions.grouping[groupLevel].columnName,
-                    value: group.key
-                  }]);
-                };
-
-                _iteratorNormalCompletion = true;
-                _didIteratorError = false;
-                _iteratorError = undefined;
-                _context.prev = 6;
-                _iterator = list[Symbol.iterator]();
-
-              case 8:
-                if (_iteratorNormalCompletion = (_step = _iterator.next()).done) {
-                  _context.next = 24;
-                  break;
-                }
-
-                group = _step.value;
-
-                countRow(!!parentGroupKey);
-                groupKey = (parentGroupKey ? parentGroupKey + '|' : '') + group.key;
-
-                if (!isExpanded(groupKey)) {
-                  _context.next = 21;
-                  break;
-                }
-
-                if (!furtherGroupLevels(groupLevel)) {
-                  _context.next = 17;
-                  break;
-                }
-
-                return _context.delegateYield(generateContentQueries(group.items, groupLevel + 1, groupKey, getParentFilters(group)), 't0', 15);
-
-              case 15:
-                _context.next = 21;
-                break;
-
-              case 17:
-                if (!groupContentOverlapsPageRange(cqTotalCount, group.count)) {
-                  _context.next = 20;
-                  break;
-                }
-
-                _context.next = 20;
-                return {
-                  groupKey: groupKey,
-                  queryString: createQueryURL(BASEDATA, {
-                    sorting: loadOptions.sorting,
-
-                    filters: loadOptions.filters.concat(getParentFilters(group))
-                  })
-                };
-
-              case 20:
-                countRows(group.count, !!group);
-
-              case 21:
-                _iteratorNormalCompletion = true;
-                _context.next = 8;
-                break;
-
-              case 24:
-                _context.next = 30;
-                break;
-
-              case 26:
-                _context.prev = 26;
-                _context.t1 = _context['catch'](6);
-                _didIteratorError = true;
-                _iteratorError = _context.t1;
-
-              case 30:
-                _context.prev = 30;
-                _context.prev = 31;
-
-                if (!_iteratorNormalCompletion && _iterator.return) {
-                  _iterator.return();
-                }
-
-              case 33:
-                _context.prev = 33;
-
-                if (!_didIteratorError) {
-                  _context.next = 36;
-                  break;
-                }
-
-                throw _iteratorError;
-
-              case 36:
-                return _context.finish(33);
-
-              case 37:
-                return _context.finish(30);
-
-              case 38:
-              case 'end':
-                return _context.stop();
-            }
+        function countRows(c, hasRowsParent) {
+          for (var i = 0; i < c; i++) {
+            countRow(hasRowsParent);
           }
-        }, _marked[0], this, [[6, 26, 30, 38], [31,, 33, 37]]);
+        }
+
+        var result = regeneratorRuntime.mark(function result() {
+          var _iteratorNormalCompletion, _didIteratorError, _iteratorError, _iterator, _step, group, groupKey;
+
+          return regeneratorRuntime.wrap(function result$(_context) {
+            while (1) {
+              switch (_context.prev = _context.next) {
+                case 0:
+                  _iteratorNormalCompletion = true;
+                  _didIteratorError = false;
+                  _iteratorError = undefined;
+                  _context.prev = 3;
+                  _iterator = list[Symbol.iterator]();
+
+                case 5:
+                  if (_iteratorNormalCompletion = (_step = _iterator.next()).done) {
+                    _context.next = 21;
+                    break;
+                  }
+
+                  group = _step.value;
+
+                  countRow(!!parentGroupKey);
+                  groupKey = (parentGroupKey ? parentGroupKey + '|' : '') + group.key;
+
+                  if (!isExpanded(groupKey)) {
+                    _context.next = 18;
+                    break;
+                  }
+
+                  if (!furtherGroupLevels(groupLevel)) {
+                    _context.next = 14;
+                    break;
+                  }
+
+                  return _context.delegateYield(createContentQueriesGenerator(group.items, groupLevel + 1, groupKey, getParentFilters(group))(), 't0', 12);
+
+                case 12:
+                  _context.next = 18;
+                  break;
+
+                case 14:
+                  if (!groupContentOverlapsPageRange(cqTotalCount, group.count)) {
+                    _context.next = 17;
+                    break;
+                  }
+
+                  _context.next = 17;
+                  return {
+                    groupKey: groupKey,
+                    queryString: createQueryURL(BASEDATA, {
+                      sorting: loadOptions.sorting,
+
+                      filters: (loadOptions.filters || []).concat(getParentFilters(group))
+                    })
+                  };
+
+                case 17:
+                  countRows(group.count, !!group);
+
+                case 18:
+                  _iteratorNormalCompletion = true;
+                  _context.next = 5;
+                  break;
+
+                case 21:
+                  _context.next = 27;
+                  break;
+
+                case 23:
+                  _context.prev = 23;
+                  _context.t1 = _context['catch'](3);
+                  _didIteratorError = true;
+                  _iteratorError = _context.t1;
+
+                case 27:
+                  _context.prev = 27;
+                  _context.prev = 28;
+
+                  if (!_iteratorNormalCompletion && _iterator.return) {
+                    _iterator.return();
+                  }
+
+                case 30:
+                  _context.prev = 30;
+
+                  if (!_didIteratorError) {
+                    _context.next = 33;
+                    break;
+                  }
+
+                  throw _iteratorError;
+
+                case 33:
+                  return _context.finish(30);
+
+                case 34:
+                  return _context.finish(27);
+
+                case 35:
+                case 'end':
+                  return _context.stop();
+              }
+            }
+          }, result, this, [[3, 23, 27, 35], [28,, 30, 34]]);
+        });
+
+        result.testing = {
+          getParentFilters: getParentFilters
+        };
+
+        return result;
       }
 
       function isPageBoundary(count) {
@@ -677,257 +681,268 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_
         return fraction > 0 && fraction === Math.trunc(fraction);
       }
 
-      function generateRows(list, contentData) {
+      function createRowsGenerator(list, contentData) {
         var groupLevel = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
+
+        var _marked = [yieldRow, getGroupContent].map(regeneratorRuntime.mark);
+
         var parentGroupRow = arguments[3];
 
-        var _marked2, yieldRow, createGroupRow, getGroupContent, _iteratorNormalCompletion3, _didIteratorError3, _iteratorError3, _iterator3, _step3, group, groupRow;
+        function yieldRow(row, rowsParent) {
+          var contRow;
+          return regeneratorRuntime.wrap(function yieldRow$(_context2) {
+            while (1) {
+              switch (_context2.prev = _context2.next) {
+                case 0:
+                  if (!(rowsParent && isPageBoundary(totalCount))) {
+                    _context2.next = 6;
+                    break;
+                  }
 
-        return regeneratorRuntime.wrap(function generateRows$(_context4) {
-          while (1) {
-            switch (_context4.prev = _context4.next) {
-              case 0:
-                getGroupContent = function getGroupContent(groupRow, contentData, itemCount) {
-                  var cd, _iteratorNormalCompletion2, _didIteratorError2, _iteratorError2, _iterator2, _step2, row, i;
+                  contRow = Object.assign({}, rowsParent, {
+                    value: rowsParent.value + ' continued...'
+                  });
 
-                  return regeneratorRuntime.wrap(function getGroupContent$(_context3) {
-                    while (1) {
-                      switch (_context3.prev = _context3.next) {
-                        case 0:
-                          cd = contentData.find(function (c) {
-                            return c.groupKey === groupRow.fullKey;
-                          });
+                  if (!countInPageRange(totalCount)) {
+                    _context2.next = 5;
+                    break;
+                  }
 
-                          if (!cd) {
-                            _context3.next = 29;
-                            break;
-                          }
+                  _context2.next = 5;
+                  return contRow;
 
-                          _iteratorNormalCompletion2 = true;
-                          _didIteratorError2 = false;
-                          _iteratorError2 = undefined;
-                          _context3.prev = 5;
-                          _iterator2 = cd.content[Symbol.iterator]();
+                case 5:
+                  totalCount++;
 
-                        case 7:
-                          if (_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done) {
-                            _context3.next = 13;
-                            break;
-                          }
+                case 6:
+                  if (!countInPageRange(totalCount)) {
+                    _context2.next = 9;
+                    break;
+                  }
 
-                          row = _step2.value;
-                          return _context3.delegateYield(yieldRow(row, groupRow), 't0', 10);
+                  _context2.next = 9;
+                  return row;
 
-                        case 10:
-                          _iteratorNormalCompletion2 = true;
-                          _context3.next = 7;
-                          break;
+                case 9:
+                  totalCount++;
 
-                        case 13:
-                          _context3.next = 19;
-                          break;
-
-                        case 15:
-                          _context3.prev = 15;
-                          _context3.t1 = _context3['catch'](5);
-                          _didIteratorError2 = true;
-                          _iteratorError2 = _context3.t1;
-
-                        case 19:
-                          _context3.prev = 19;
-                          _context3.prev = 20;
-
-                          if (!_iteratorNormalCompletion2 && _iterator2.return) {
-                            _iterator2.return();
-                          }
-
-                        case 22:
-                          _context3.prev = 22;
-
-                          if (!_didIteratorError2) {
-                            _context3.next = 25;
-                            break;
-                          }
-
-                          throw _iteratorError2;
-
-                        case 25:
-                          return _context3.finish(22);
-
-                        case 26:
-                          return _context3.finish(19);
-
-                        case 27:
-                          _context3.next = 35;
-                          break;
-
-                        case 29:
-                          i = 0;
-
-                        case 30:
-                          if (!(i < itemCount)) {
-                            _context3.next = 35;
-                            break;
-                          }
-
-                          return _context3.delegateYield(yieldRow(null, groupRow), 't2', 32);
-
-                        case 32:
-                          i++;
-                          _context3.next = 30;
-                          break;
-
-                        case 35:
-                        case 'end':
-                          return _context3.stop();
-                      }
-                    }
-                  }, _marked2[1], this, [[5, 15, 19, 27], [20,, 22, 26]]);
-                };
-
-                createGroupRow = function createGroupRow(group) {
-                  return {
-                    fullKey: (parentGroupRow ? parentGroupRow.fullKey + '|' : '') + ('' + group.key),
-                    key: '' + group.key,
-                    groupedBy: loadOptions.grouping[groupLevel].columnName,
-                    value: group.key,
-                    type: 'groupRow'
-                  };
-                };
-
-                yieldRow = function yieldRow(row, rowsParent) {
-                  var contRow;
-                  return regeneratorRuntime.wrap(function yieldRow$(_context2) {
-                    while (1) {
-                      switch (_context2.prev = _context2.next) {
-                        case 0:
-                          if (!(rowsParent && isPageBoundary(totalCount))) {
-                            _context2.next = 6;
-                            break;
-                          }
-
-                          contRow = Object.assign({}, rowsParent, {
-                            value: rowsParent.value + ' continued...',
-                            column: rowsParent.column
-                          });
-
-                          if (!countInPageRange(totalCount)) {
-                            _context2.next = 5;
-                            break;
-                          }
-
-                          _context2.next = 5;
-                          return contRow;
-
-                        case 5:
-                          totalCount++;
-
-                        case 6:
-                          if (!countInPageRange(totalCount)) {
-                            _context2.next = 9;
-                            break;
-                          }
-
-                          _context2.next = 9;
-                          return row;
-
-                        case 9:
-                          totalCount++;
-
-                        case 10:
-                        case 'end':
-                          return _context2.stop();
-                      }
-                    }
-                  }, _marked2[0], this);
-                };
-
-                _marked2 = [yieldRow, getGroupContent].map(regeneratorRuntime.mark);
-                _iteratorNormalCompletion3 = true;
-                _didIteratorError3 = false;
-                _iteratorError3 = undefined;
-                _context4.prev = 7;
-                _iterator3 = list[Symbol.iterator]();
-
-              case 9:
-                if (_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done) {
-                  _context4.next = 22;
-                  break;
-                }
-
-                group = _step3.value;
-                groupRow = createGroupRow(group);
-                return _context4.delegateYield(yieldRow(groupRow, parentGroupRow), 't0', 13);
-
-              case 13:
-                if (!isExpanded(groupRow.fullKey)) {
-                  _context4.next = 19;
-                  break;
-                }
-
-                if (!furtherGroupLevels(groupLevel)) {
-                  _context4.next = 18;
-                  break;
-                }
-
-                return _context4.delegateYield(generateRows(group.items, contentData, groupLevel + 1, groupRow), 't1', 16);
-
-              case 16:
-                _context4.next = 19;
-                break;
-
-              case 18:
-                return _context4.delegateYield(getGroupContent(groupRow, contentData, group.count), 't2', 19);
-
-              case 19:
-                _iteratorNormalCompletion3 = true;
-                _context4.next = 9;
-                break;
-
-              case 22:
-                _context4.next = 28;
-                break;
-
-              case 24:
-                _context4.prev = 24;
-                _context4.t3 = _context4['catch'](7);
-                _didIteratorError3 = true;
-                _iteratorError3 = _context4.t3;
-
-              case 28:
-                _context4.prev = 28;
-                _context4.prev = 29;
-
-                if (!_iteratorNormalCompletion3 && _iterator3.return) {
-                  _iterator3.return();
-                }
-
-              case 31:
-                _context4.prev = 31;
-
-                if (!_didIteratorError3) {
-                  _context4.next = 34;
-                  break;
-                }
-
-                throw _iteratorError3;
-
-              case 34:
-                return _context4.finish(31);
-
-              case 35:
-                return _context4.finish(28);
-
-              case 36:
-              case 'end':
-                return _context4.stop();
+                case 10:
+                case 'end':
+                  return _context2.stop();
+              }
             }
-          }
-        }, _marked[1], this, [[7, 24, 28, 36], [29,, 31, 35]]);
+          }, _marked[0], this);
+        }
+
+        function createGroupRow(group) {
+          return {
+            fullKey: (parentGroupRow ? parentGroupRow.fullKey + '|' : '') + ('' + group.key),
+            key: '' + group.key,
+            groupedBy: loadOptions.grouping[groupLevel].columnName,
+            value: group.key,
+            type: 'groupRow'
+          };
+        }
+
+        function getGroupContent(groupRow, contentData, itemCount) {
+          var cd, _iteratorNormalCompletion2, _didIteratorError2, _iteratorError2, _iterator2, _step2, row, i;
+
+          return regeneratorRuntime.wrap(function getGroupContent$(_context3) {
+            while (1) {
+              switch (_context3.prev = _context3.next) {
+                case 0:
+                  cd = contentData.find(function (c) {
+                    return c.groupKey === groupRow.fullKey;
+                  });
+
+                  if (!cd) {
+                    _context3.next = 29;
+                    break;
+                  }
+
+                  _iteratorNormalCompletion2 = true;
+                  _didIteratorError2 = false;
+                  _iteratorError2 = undefined;
+                  _context3.prev = 5;
+                  _iterator2 = cd.content[Symbol.iterator]();
+
+                case 7:
+                  if (_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done) {
+                    _context3.next = 13;
+                    break;
+                  }
+
+                  row = _step2.value;
+                  return _context3.delegateYield(yieldRow(row, groupRow), 't0', 10);
+
+                case 10:
+                  _iteratorNormalCompletion2 = true;
+                  _context3.next = 7;
+                  break;
+
+                case 13:
+                  _context3.next = 19;
+                  break;
+
+                case 15:
+                  _context3.prev = 15;
+                  _context3.t1 = _context3['catch'](5);
+                  _didIteratorError2 = true;
+                  _iteratorError2 = _context3.t1;
+
+                case 19:
+                  _context3.prev = 19;
+                  _context3.prev = 20;
+
+                  if (!_iteratorNormalCompletion2 && _iterator2.return) {
+                    _iterator2.return();
+                  }
+
+                case 22:
+                  _context3.prev = 22;
+
+                  if (!_didIteratorError2) {
+                    _context3.next = 25;
+                    break;
+                  }
+
+                  throw _iteratorError2;
+
+                case 25:
+                  return _context3.finish(22);
+
+                case 26:
+                  return _context3.finish(19);
+
+                case 27:
+                  _context3.next = 35;
+                  break;
+
+                case 29:
+                  i = 0;
+
+                case 30:
+                  if (!(i < itemCount)) {
+                    _context3.next = 35;
+                    break;
+                  }
+
+                  return _context3.delegateYield(yieldRow(null, groupRow), 't2', 32);
+
+                case 32:
+                  i++;
+                  _context3.next = 30;
+                  break;
+
+                case 35:
+                case 'end':
+                  return _context3.stop();
+              }
+            }
+          }, _marked[1], this, [[5, 15, 19, 27], [20,, 22, 26]]);
+        }
+
+        var result = regeneratorRuntime.mark(function result() {
+          var _iteratorNormalCompletion3, _didIteratorError3, _iteratorError3, _iterator3, _step3, group, groupRow;
+
+          return regeneratorRuntime.wrap(function result$(_context4) {
+            while (1) {
+              switch (_context4.prev = _context4.next) {
+                case 0:
+                  _iteratorNormalCompletion3 = true;
+                  _didIteratorError3 = false;
+                  _iteratorError3 = undefined;
+                  _context4.prev = 3;
+                  _iterator3 = list[Symbol.iterator]();
+
+                case 5:
+                  if (_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done) {
+                    _context4.next = 18;
+                    break;
+                  }
+
+                  group = _step3.value;
+                  groupRow = createGroupRow(group);
+                  return _context4.delegateYield(yieldRow(groupRow, parentGroupRow), 't0', 9);
+
+                case 9:
+                  if (!isExpanded(groupRow.fullKey)) {
+                    _context4.next = 15;
+                    break;
+                  }
+
+                  if (!furtherGroupLevels(groupLevel)) {
+                    _context4.next = 14;
+                    break;
+                  }
+
+                  return _context4.delegateYield(createRowsGenerator(group.items, contentData, groupLevel + 1, groupRow)(), 't1', 12);
+
+                case 12:
+                  _context4.next = 15;
+                  break;
+
+                case 14:
+                  return _context4.delegateYield(getGroupContent(groupRow, contentData, group.count), 't2', 15);
+
+                case 15:
+                  _iteratorNormalCompletion3 = true;
+                  _context4.next = 5;
+                  break;
+
+                case 18:
+                  _context4.next = 24;
+                  break;
+
+                case 20:
+                  _context4.prev = 20;
+                  _context4.t3 = _context4['catch'](3);
+                  _didIteratorError3 = true;
+                  _iteratorError3 = _context4.t3;
+
+                case 24:
+                  _context4.prev = 24;
+                  _context4.prev = 25;
+
+                  if (!_iteratorNormalCompletion3 && _iterator3.return) {
+                    _iterator3.return();
+                  }
+
+                case 27:
+                  _context4.prev = 27;
+
+                  if (!_didIteratorError3) {
+                    _context4.next = 30;
+                    break;
+                  }
+
+                  throw _iteratorError3;
+
+                case 30:
+                  return _context4.finish(27);
+
+                case 31:
+                  return _context4.finish(24);
+
+                case 32:
+                case 'end':
+                  return _context4.stop();
+              }
+            }
+          }, result, this, [[3, 20, 24, 32], [25,, 27, 31]]);
+        });
+
+        result.testing = {
+          yieldRow: yieldRow,
+          createGroupRow: createGroupRow,
+          getGroupContent: getGroupContent
+        };
+
+        return result;
       }
 
       function getContentData(groups) {
-        var queries = Array.from(generateContentQueries(groups)).map(function (q) {
+        var queries = Array.from(createContentQueriesGenerator(groups)()).map(function (q) {
           return simpleQuery(q.queryString).then(function (res) {
             return {
               groupKey: q.groupKey,
@@ -939,20 +954,35 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_
         return Promise.all(queries);
       }
 
-      return getContentData(data.data).then(function (contentData) {
-        return {
-          rows: Array.from(generateRows(data.data, contentData)),
-          totalCount: totalCount
-        };
-      });
+      var result = function result() {
+        return getContentData(data.data).then(function (contentData) {
+          return {
+            rows: Array.from(createRowsGenerator(data.data, contentData)()),
+            totalCount: totalCount
+          };
+        });
+      };
+
+      result.testing = {
+        isExpanded: isExpanded,
+        furtherGroupLevels: furtherGroupLevels,
+        pageRangeStart: pageRangeStart,
+        pageRangeEnd: pageRangeEnd,
+        countInPageRange: countInPageRange,
+        groupContentOverlapsPageRange: groupContentOverlapsPageRange,
+        createContentQueriesGenerator: createContentQueriesGenerator,
+        isPageBoundary: isPageBoundary,
+        createRowsGenerator: createRowsGenerator,
+        getContentData: getContentData
+      };
+
+      return result;
     };
 
     var simpleQuery = function simpleQuery(queryUrl) {
       return fetch(queryUrl).then(function (response) {
         return response.json();
       }).then(function (data) {
-        console.log('Received simple data: ', data);
-
         return {
           dataFetched: true,
           data: convertSimpleQueryData(data)
@@ -969,9 +999,7 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_
       return fetch(queryUrl).then(function (response) {
         return response.json();
       }).then(function (data) {
-        console.log('Received group data: ', data);
-
-        return createGroupQueryData(data, loadOptions).then(function (data) {
+        return createGroupQueryDataGenerator(data, loadOptions)().then(function (data) {
           return {
             dataFetched: true,
             data: data
@@ -985,17 +1013,29 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_
       });
     };
 
-    return function (loadOptions) {
+    var result = function result(loadOptions) {
       var queryUrl = createQueryURL(BASEDATA, loadOptions);
 
-      return new Promise(function (resolve, reject) {
-        console.warn('Querying (decoded): ', decodeURIComponent(queryUrl));
-
+      return new Promise(function (resolve) {
         (loadOptions.grouping && loadOptions.grouping.length > 0 ? groupQuery(queryUrl, loadOptions) : simpleQuery(queryUrl)).then(function (result) {
           return resolve(result);
         });
       });
     };
+
+    result.testing = {
+      getSortingParams: getSortingParams,
+      getPagingParams: getPagingParams,
+      getFilterParams: getFilterParams,
+      getGroupParams: getGroupParams,
+      createQueryURL: createQueryURL,
+      convertSimpleQueryData: convertSimpleQueryData,
+      createGroupQueryDataGenerator: createGroupQueryDataGenerator,
+      simpleQuery: simpleQuery,
+      groupQuery: groupQuery
+    };
+
+    return result;
   };
 
   var fetchData = createDataFetcher();
