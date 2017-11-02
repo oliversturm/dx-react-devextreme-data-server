@@ -1,7 +1,8 @@
 {
   "name": "dx-react-devextreme-data-server",
   "version": "1.0.18",
-  "description": "DevExtreme React Grid plugin for remote data loading from a DevExtreme data service",
+  "description":
+    "DevExtreme React Grid plugin for remote data loading from a DevExtreme data service",
   "repository": {
     "type": "git",
     "url": "https://github.com/oliversturm/dx-react-devextreme-data-server.git"
@@ -9,22 +10,21 @@
   "author": "Oliver Sturm",
   "license": "SEE LICENSE IN LICENSE",
   "bugs": {
-    "url": "https://github.com/oliversturm/dx-react-devextreme-data-server/issues"
+    "url":
+      "https://github.com/oliversturm/dx-react-devextreme-data-server/issues"
   },
   "homepage": "https://github.com/oliversturm/dx-react-devextreme-data-server",
-  "keywords": [
-    "devextreme",
-    "devexpress",
-    "react",
-    "grid"
-  ],
+  "keywords": ["devextreme", "devexpress", "react", "grid"],
   "scripts": {
-    "prepare": "npm run lint && babel src --ignore __tests__ --out-dir ./dist && copyfiles -u 1 ./src/loading.css ./dist && webpack",
+    "prepare":
+      "npm run lint && babel src --ignore __tests__ --out-dir ./dist && copyfiles -u 1 ./src/loading.css ./dist && webpack",
     "lint": "eslint ./src",
     "lintfix": "eslint ./src --fix",
-    "test": "npm run lint && mocha --require babel-register --require ignore-styles src/**/__tests__/**/*.js",
+    "test":
+      "npm run lint && mocha --require babel-register --require ignore-styles src/**/__tests__/**/*.js",
     "test-watch": "npm run test -- --watch --watch-extensions js",
-    "coverage": "nyc --reporter=lcovonly --reporter=text mocha --require babel-register --require ignore-styles src/**/__tests__/**/*.js"
+    "coverage":
+      "nyc --reporter=lcovonly --reporter=text mocha --require babel-register --require ignore-styles src/**/__tests__/**/*.js"
   },
   "devDependencies": {
     "@devexpress/dx-react-core": "^1.0.0-alpha.14",
@@ -69,7 +69,9 @@
     "react-dom": "^16.0.0",
     "@devexpress/dx-react-core": "1.0.0-alpha.14",
     "@devexpress/dx-react-grid": "^1.0.0-alpha.14",
-    "prop-types": "^15.6.0"
+    "prop-types": "^15.6.0",
+    "qs": "^6.5.1",
+    "lodash": "^4.17.4"
   },
   "dependencies": {
     "babel-runtime": "^6.26.0"
