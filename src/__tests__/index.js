@@ -249,5 +249,157 @@ describe('data access library', function() {
         assert.isFalse(groupContentOverlapsPageRange(17, 10));
       });
     });
+
+    describe('contentQueriesGenerator', function() {
+      describe('getParentFilters', function() {
+        it('works', function() {
+          const {
+            contentQueriesGenerator
+          } = createGroupQueryDataGenerator(null, {
+            pageSize: 10,
+            currentPage: 0,
+            grouping: [{ columnName: 'test' }]
+          }).testing;
+
+          const { getParentFilters } = contentQueriesGenerator(null, 0, null, [
+            { existingFilter: 'barg' }
+          ]).testing;
+          assert.deepEqual(getParentFilters({ key: 'akey' }), [
+            { existingFilter: 'barg' },
+            { columnName: 'test', value: 'akey' }
+          ]);
+        });
+      });
+
+      describe('function', function() {
+        it('works with one result', function() {
+          const {
+            contentQueriesGenerator
+          } = createGroupQueryDataGenerator(null, {
+            pageSize: 5,
+            currentPage: 1,
+            grouping: [{ columnName: 'test' }, { columnName: 'test2' }],
+            expandedGroups: new Set(['top2', 'top3', 'top3|sub3', 'top3|sub4'])
+          }).testing;
+          const groupData = [
+            {
+              // group counts as one row, not expanded
+              key: 'top1',
+              items: [],
+              count: 3
+            },
+            {
+              // group counts as three rows, expanded with non-expanded children
+              key: 'top2',
+              items: [
+                { key: 'sub1', items: [], count: 1 },
+                { key: 'sub2', items: [], count: 1 }
+              ],
+              count: 2
+            },
+            {
+              // group is expanded, header node is the final node on page 0 for
+              // pageSize 5
+              // first node of page 1 is the cont node for this
+              key: 'top3',
+              items: [
+                {
+                  // sub group is expanded, data should be queried because
+                  // parts of it are visible with pageSize 5 and currentPage 1
+                  // second node on page 1 is the header of this,
+                  // followed by three content rows (out of five)
+                  key: 'sub3',
+                  items: [],
+                  count: 5
+                },
+                {
+                  // sub group is expanded, but it's not visible with pageSize 5
+                  // and currentPage 1, so should not be queried
+                  key: 'sub4',
+                  items: [],
+                  count: 5
+                }
+              ],
+              count: 2
+            }
+          ];
+          const result = Array.from(contentQueriesGenerator(groupData)());
+          assert.deepEqual(result, [
+            {
+              groupKey: 'top3|sub3',
+              queryString:
+                '//localhost:3000/data/v1/values?filter%5B0%5D%5B0%5D=test&filter%5B0%5D%5B1%5D=%3D&filter%5B0%5D%5B2%5D=top3&filter%5B1%5D=and&filter%5B2%5D%5B0%5D=test2&filter%5B2%5D%5B1%5D=%3D&filter%5B2%5D%5B2%5D=sub3&requireTotalCount=true&tzOffset=0'
+            }
+          ]);
+        });
+
+        it('works with two results', function() {
+          const {
+            contentQueriesGenerator
+          } = createGroupQueryDataGenerator(null, {
+            pageSize: 5,
+            currentPage: 1,
+            grouping: [{ columnName: 'test' }, { columnName: 'test2' }],
+            expandedGroups: new Set(['top2', 'top3', 'top3|sub3', 'top3|sub4'])
+          }).testing;
+          const groupData = [
+            {
+              // group counts as one row, not expanded
+              key: 'top1',
+              items: [],
+              count: 3
+            },
+            {
+              // group counts as three rows, expanded with non-expanded children
+              key: 'top2',
+              items: [
+                { key: 'sub1', items: [], count: 1 },
+                { key: 'sub2', items: [], count: 1 }
+              ],
+              count: 2
+            },
+            {
+              // group is expanded, header node is the final node on page 0 for
+              // pageSize 5
+              // first node of page 1 is the cont node for this
+              key: 'top3',
+              items: [
+                {
+                  // sub group is expanded, data should be queried because
+                  // parts of it are visible with pageSize 5 and currentPage 1
+                  // second node on page 1 is the header of this,
+                  // followed by one content row
+                  key: 'sub3',
+                  items: [],
+                  count: 1
+                },
+                {
+                  // sub group is expanded, data should be queried because
+                  // page 1 has two rows available, so the header of this
+                  // group and one content row fit on
+                  key: 'sub4',
+                  items: [],
+                  count: 5
+                }
+              ],
+              count: 2
+            }
+          ];
+          const result = Array.from(contentQueriesGenerator(groupData)());
+          assert.deepEqual(result, [
+            {
+              groupKey: 'top3|sub3',
+              queryString:
+                '//localhost:3000/data/v1/values?filter%5B0%5D%5B0%5D=test&filter%5B0%5D%5B1%5D=%3D&filter%5B0%5D%5B2%5D=top3&filter%5B1%5D=and&filter%5B2%5D%5B0%5D=test2&filter%5B2%5D%5B1%5D=%3D&filter%5B2%5D%5B2%5D=sub3&requireTotalCount=true&tzOffset=0'
+            },
+            {
+              groupKey: 'top3|sub4',
+              queryString:
+                '//localhost:3000/data/v1/values?filter%5B0%5D%5B0%5D=test&filter%5B0%5D%5B1%5D=%3D&filter%5B0%5D%5B2%5D=top3&filter%5B1%5D=and&filter%5B2%5D%5B0%5D=test2&filter%5B2%5D%5B1%5D=%3D&filter%5B2%5D%5B2%5D=sub4&requireTotalCount=true&tzOffset=0'
+            }
+          ]);
+        });
+      });
+    });
   });
 });

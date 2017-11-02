@@ -59,8 +59,6 @@ const createDataFetcher = (BASEDATA = DEFAULTBASEDATA) => {
       }
     ]);
 
-    //console.log('Created params: ', params);
-
     const query = qs.stringify(params, {
       arrayFormat: 'indices'
     });
@@ -73,15 +71,17 @@ const createDataFetcher = (BASEDATA = DEFAULTBASEDATA) => {
   });
 
   const createGroupQueryDataGenerator = (data, loadOptions) => {
-    const isExpanded = groupKey => {
-      //console.log('Testing groupKey for expanded: ', groupKey);
-      return loadOptions.expandedGroups.has(groupKey);
-    };
+    const isExpanded = groupKey => loadOptions.expandedGroups.has(groupKey);
+
     const furtherGroupLevels = groupLevel =>
       groupLevel + 1 < loadOptions.grouping.length;
 
+    // both total counts on this level - cqTotalCount is used only inside the
+    // contentQueriesGenerator, but that is recursive and cqTotalCount should be
+    // outside that context
     let cqTotalCount = 0;
     let totalCount = 0;
+
     // page range: if totalCount is >= pageRangeStart and < pageRangeEnd
     // *before* the yield, then we yield
     const pageRangeStart =
@@ -133,24 +133,26 @@ const createDataFetcher = (BASEDATA = DEFAULTBASEDATA) => {
           const groupKey =
             (parentGroupKey ? `${parentGroupKey}|` : '') + group.key;
           if (isExpanded(groupKey)) {
-            //console.log('Found expanded group: ', groupKey);
-            if (furtherGroupLevels(groupLevel))
+            if (furtherGroupLevels(groupLevel)) {
               yield* contentQueriesGenerator(
                 group.items,
                 groupLevel + 1,
                 groupKey,
                 getParentFilters(group)
               )();
-            else {
-              if (groupContentOverlapsPageRange(cqTotalCount, group.count))
+            } else {
+              if (groupContentOverlapsPageRange(cqTotalCount, group.count)) {
                 yield {
                   groupKey,
                   queryString: createQueryURL(BASEDATA, {
                     sorting: loadOptions.sorting,
                     // not passing paging options
-                    filters: loadOptions.filters.concat(getParentFilters(group))
+                    filters: (loadOptions.filters || []).concat(
+                      getParentFilters(group)
+                    )
                   })
                 };
+              }
               countRows(group.count, !!group);
             }
           }
@@ -302,8 +304,6 @@ const createDataFetcher = (BASEDATA = DEFAULTBASEDATA) => {
     return fetch(queryUrl)
       .then(response => response.json())
       .then(data => {
-        //console.log('Received simple data: ', data);
-
         return {
           dataFetched: true,
           data: convertSimpleQueryData(data)
@@ -334,8 +334,6 @@ const createDataFetcher = (BASEDATA = DEFAULTBASEDATA) => {
     return fetch(queryUrl)
       .then(response => response.json())
       .then(data => {
-        //console.log('Received group data: ', data);
-
         return createGroupQueryDataGenerator(
           data,
           loadOptions
@@ -354,8 +352,6 @@ const createDataFetcher = (BASEDATA = DEFAULTBASEDATA) => {
     const queryUrl = createQueryURL(BASEDATA, loadOptions);
 
     return new Promise(resolve => {
-      //console.warn('Querying (decoded): ', decodeURIComponent(queryUrl));
-
       (loadOptions.grouping && loadOptions.grouping.length > 0
         ? groupQuery(queryUrl, loadOptions)
         : simpleQuery(queryUrl)
