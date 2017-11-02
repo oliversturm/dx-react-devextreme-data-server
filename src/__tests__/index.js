@@ -1,5 +1,5 @@
 import { assert } from 'chai';
-import { describe, it } from 'mocha';
+import { describe, it, beforeEach } from 'mocha';
 import { DevExtremeDataServer } from '../index';
 import { fetchData } from '../data-access';
 
@@ -230,12 +230,13 @@ describe('data access library', function() {
     });
 
     describe('groupContentOverlapsPageRange', function() {
-      const {
-        groupContentOverlapsPageRange
-      } = createGroupQueryDataGenerator(null, {
-        pageSize: 10,
-        currentPage: 3
-      }).testing;
+      let groupContentOverlapsPageRange;
+      beforeEach(() => {
+        groupContentOverlapsPageRange = createGroupQueryDataGenerator(null, {
+          pageSize: 10,
+          currentPage: 3
+        }).testing.groupContentOverlapsPageRange;
+      });
 
       it('finds overlap', function() {
         assert.isTrue(groupContentOverlapsPageRange(36, 10));
@@ -250,20 +251,40 @@ describe('data access library', function() {
       });
     });
 
-    describe('contentQueriesGenerator', function() {
+    describe('isPageBoundary', function() {
+      let isPageBoundary;
+      beforeEach(() => {
+        isPageBoundary = createGroupQueryDataGenerator(null, {
+          pageSize: 10,
+          currentPage: 3
+        }).testing.isPageBoundary;
+      });
+
+      it('works', function() {
+        assert.isTrue(isPageBoundary(10));
+        assert.isTrue(isPageBoundary(20));
+        assert.isFalse(isPageBoundary(0));
+        assert.isFalse(isPageBoundary(11));
+      });
+    });
+
+    describe('createContentQueriesGenerator', function() {
       describe('getParentFilters', function() {
         it('works', function() {
           const {
-            contentQueriesGenerator
+            createContentQueriesGenerator
           } = createGroupQueryDataGenerator(null, {
             pageSize: 10,
             currentPage: 0,
             grouping: [{ columnName: 'test' }]
           }).testing;
 
-          const { getParentFilters } = contentQueriesGenerator(null, 0, null, [
-            { existingFilter: 'barg' }
-          ]).testing;
+          const { getParentFilters } = createContentQueriesGenerator(
+            null,
+            0,
+            null,
+            [{ existingFilter: 'barg' }]
+          ).testing;
           assert.deepEqual(getParentFilters({ key: 'akey' }), [
             { existingFilter: 'barg' },
             { columnName: 'test', value: 'akey' }
@@ -274,7 +295,7 @@ describe('data access library', function() {
       describe('function', function() {
         it('works with one result', function() {
           const {
-            contentQueriesGenerator
+            createContentQueriesGenerator
           } = createGroupQueryDataGenerator(null, {
             pageSize: 5,
             currentPage: 1,
@@ -323,7 +344,7 @@ describe('data access library', function() {
               count: 2
             }
           ];
-          const result = Array.from(contentQueriesGenerator(groupData)());
+          const result = Array.from(createContentQueriesGenerator(groupData)());
           assert.deepEqual(result, [
             {
               groupKey: 'top3|sub3',
@@ -335,7 +356,7 @@ describe('data access library', function() {
 
         it('works with two results', function() {
           const {
-            contentQueriesGenerator
+            createContentQueriesGenerator
           } = createGroupQueryDataGenerator(null, {
             pageSize: 5,
             currentPage: 1,
@@ -385,7 +406,7 @@ describe('data access library', function() {
               count: 2
             }
           ];
-          const result = Array.from(contentQueriesGenerator(groupData)());
+          const result = Array.from(createContentQueriesGenerator(groupData)());
           assert.deepEqual(result, [
             {
               groupKey: 'top3|sub3',
@@ -396,6 +417,219 @@ describe('data access library', function() {
               groupKey: 'top3|sub4',
               queryString:
                 '//localhost:3000/data/v1/values?filter%5B0%5D%5B0%5D=test&filter%5B0%5D%5B1%5D=%3D&filter%5B0%5D%5B2%5D=top3&filter%5B1%5D=and&filter%5B2%5D%5B0%5D=test2&filter%5B2%5D%5B1%5D=%3D&filter%5B2%5D%5B2%5D=sub4&requireTotalCount=true&tzOffset=0'
+            }
+          ]);
+        });
+      });
+    });
+
+    describe('createRowsGenerator', function() {
+      let createRowsGenerator;
+      beforeEach(() => {
+        createRowsGenerator = createGroupQueryDataGenerator(null, {
+          pageSize: 3,
+          currentPage: 1,
+          grouping: [{ columnName: 'test' }, { columnName: 'test2' }],
+          expandedGroups: new Set(['top2', 'top3', 'top3|sub3', 'top3|sub4'])
+        }).testing.createRowsGenerator;
+      });
+
+      describe('yieldRow', function() {
+        it('yieldRow with rowsParent', function() {
+          const { yieldRow } = createRowsGenerator().testing;
+          const row = { name: 'test row' };
+          const rowsParent = { value: 'parent value', column: 'parentColumn' };
+          const result1 = Array.from(yieldRow(row, rowsParent));
+          assert.deepEqual(result1, []);
+          const result2 = Array.from(yieldRow(row, rowsParent));
+          assert.deepEqual(result2, []);
+          const result3 = Array.from(yieldRow(row, rowsParent));
+          assert.deepEqual(result3, []);
+          // at this point, page 0 is full - we expect results
+          // now, since currentPage=1
+          const result4 = Array.from(yieldRow(row, rowsParent));
+          assert.deepEqual(result4, [
+            { column: 'parentColumn', value: 'parent value continued...' },
+            row
+          ]);
+          const result5 = Array.from(yieldRow(row, rowsParent));
+          assert.deepEqual(result5, [row]);
+          // at this point, page 1 is full - following content
+          // doesn't render anymore
+          const result6 = Array.from(yieldRow(row, rowsParent));
+          assert.deepEqual(result6, []);
+        });
+      });
+
+      describe('createGroupRow', function() {
+        it('works', function() {
+          const { createGroupRow } = createRowsGenerator(
+            undefined,
+            undefined,
+            undefined,
+            { fullKey: 'parentKey' }
+          ).testing;
+          assert.deepEqual(createGroupRow({ key: 'groupKey' }), {
+            fullKey: 'parentKey|groupKey',
+            key: 'groupKey',
+            groupedBy: 'test',
+            value: 'groupKey',
+            type: 'groupRow'
+          });
+        });
+      });
+
+      describe('getGroupContent', function() {
+        it('works when contentData is found', function() {
+          const { getGroupContent } = createRowsGenerator().testing;
+          const groupRow = {
+            fullKey: 'groupKey',
+            value: 'parent group',
+            column: 'groupColumn'
+          };
+          const contentData = [
+            {
+              groupKey: 'groupKey',
+              content: [
+                { name: 'row1' },
+                { name: 'row2' },
+                { name: 'row3' },
+                { name: 'row4' },
+                { name: 'row5' },
+                { name: 'row6' },
+                { name: 'row7' }
+              ]
+            }
+          ];
+          const result = Array.from(getGroupContent(groupRow, contentData, 0));
+          assert.deepEqual(result, [
+            {
+              column: 'groupColumn',
+              fullKey: 'groupKey',
+              value: 'parent group continued...'
+            },
+            {
+              name: 'row4'
+            },
+            {
+              name: 'row5'
+            }
+          ]);
+        });
+
+        it('works when contentData is not found', function() {
+          const { getGroupContent } = createRowsGenerator().testing;
+          const groupRow = {
+            fullKey: 'groupKey',
+            value: 'parent group',
+            column: 'groupColumn'
+          };
+          const contentData = [];
+          const result = Array.from(getGroupContent(groupRow, contentData, 10));
+          assert.deepEqual(result, [
+            {
+              column: 'groupColumn',
+              fullKey: 'groupKey',
+              value: 'parent group continued...'
+            },
+            null,
+            null
+          ]);
+        });
+      });
+
+      describe('function', function() {
+        it('works', function() {
+          // Making my own createRowsGenerator, different page size
+          // from other tests in this group.
+          createRowsGenerator = createGroupQueryDataGenerator(null, {
+            pageSize: 5,
+            currentPage: 1,
+            grouping: [{ columnName: 'test' }, { columnName: 'test2' }],
+            expandedGroups: new Set(['top2', 'top3', 'top3|sub3', 'top3|sub4'])
+          }).testing.createRowsGenerator;
+          const groupData = [
+            {
+              // group counts as one row, not expanded
+              key: 'top1',
+              items: [],
+              count: 3
+            },
+            {
+              // group counts as three rows, expanded with non-expanded children
+              key: 'top2',
+              items: [
+                { key: 'sub1', items: [], count: 1 },
+                { key: 'sub2', items: [], count: 1 }
+              ],
+              count: 2
+            },
+            {
+              // group is expanded, header node is the final node on page 0 for
+              // pageSize 5
+              // first node of page 1 is the cont node for this
+              key: 'top3',
+              items: [
+                {
+                  // sub group is expanded, data should be queried because
+                  // parts of it are visible with pageSize 5 and currentPage 1
+                  // second node on page 1 is the header of this,
+                  // followed by three content rows (out of five)
+                  key: 'sub3',
+                  items: [],
+                  count: 5
+                },
+                {
+                  // sub group is expanded, but it's not visible with pageSize 5
+                  // and currentPage 1, so should not be queried
+                  key: 'sub4',
+                  items: [],
+                  count: 5
+                }
+              ],
+              count: 2
+            }
+          ];
+
+          const contentData = [
+            {
+              groupKey: 'top3|sub3',
+              content: [
+                { name: 'content row 1' },
+                { name: 'content row 2' },
+                { name: 'content row 3' },
+                { name: 'content row 4' },
+                { name: 'content row 5' }
+              ]
+            }
+          ];
+
+          const result = Array.from(
+            createRowsGenerator(groupData, contentData)()
+          );
+          assert.deepEqual(result, [
+            {
+              fullKey: 'top3',
+              groupedBy: 'test',
+              key: 'top3',
+              type: 'groupRow',
+              value: 'top3 continued...'
+            },
+            {
+              fullKey: 'top3|sub3',
+              groupedBy: 'test2',
+              key: 'sub3',
+              type: 'groupRow',
+              value: 'sub3'
+            },
+            {
+              name: 'content row 1'
+            },
+            {
+              name: 'content row 2'
+            },
+            {
+              name: 'content row 3'
             }
           ]);
         });

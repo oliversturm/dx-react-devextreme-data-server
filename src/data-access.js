@@ -102,7 +102,7 @@ const createDataFetcher = (BASEDATA = DEFAULTBASEDATA) => {
           groupStart + groupLength >= pageRangeStart
         : true;
 
-    function contentQueriesGenerator(
+    function createContentQueriesGenerator(
       list,
       groupLevel = 0,
       parentGroupKey,
@@ -134,7 +134,7 @@ const createDataFetcher = (BASEDATA = DEFAULTBASEDATA) => {
             (parentGroupKey ? `${parentGroupKey}|` : '') + group.key;
           if (isExpanded(groupKey)) {
             if (furtherGroupLevels(groupLevel)) {
-              yield* contentQueriesGenerator(
+              yield* createContentQueriesGenerator(
                 group.items,
                 groupLevel + 1,
                 groupKey,
@@ -185,8 +185,7 @@ const createDataFetcher = (BASEDATA = DEFAULTBASEDATA) => {
 
         if (rowsParent && isPageBoundary(totalCount)) {
           const contRow = Object.assign({}, rowsParent, {
-            value: `${rowsParent.value} continued...`,
-            column: rowsParent.column
+            value: `${rowsParent.value} continued...`
           });
           if (countInPageRange(totalCount)) yield contRow;
           totalCount++;
@@ -214,10 +213,6 @@ const createDataFetcher = (BASEDATA = DEFAULTBASEDATA) => {
       }
 
       function* getGroupContent(groupRow, contentData, itemCount) {
-        // console.log(
-        //   `getGroupContent with key ${groupRow.fullKey}, contentData`,
-        //   contentData
-        // );
         const cd = contentData.find(c => c.groupKey === groupRow.fullKey);
         if (cd) {
           // optimization idea: only query as many content records
@@ -268,7 +263,9 @@ const createDataFetcher = (BASEDATA = DEFAULTBASEDATA) => {
     }
 
     function getContentData(groups) {
-      const queries = Array.from(contentQueriesGenerator(groups)()).map(q =>
+      const queries = Array.from(
+        createContentQueriesGenerator(groups)()
+      ).map(q =>
         simpleQuery(q.queryString).then(res => ({
           groupKey: q.groupKey,
           content: res.dataFetched ? res.data.rows : undefined
@@ -291,7 +288,7 @@ const createDataFetcher = (BASEDATA = DEFAULTBASEDATA) => {
       pageRangeEnd,
       countInPageRange,
       groupContentOverlapsPageRange,
-      contentQueriesGenerator,
+      createContentQueriesGenerator,
       isPageBoundary,
       createRowsGenerator,
       getContentData
