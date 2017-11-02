@@ -35,7 +35,7 @@ class DevExtremeDataServer extends React.PureComponent {
     this.getRows = this.getRows.bind(this);
     this.getTotalCount = this.getTotalCount.bind(this);
 
-    this.fetchData = createDataFetcher(this.props.url);
+    this.fetchData = createDataFetcher(props.url);
   }
 
   getRows() {
