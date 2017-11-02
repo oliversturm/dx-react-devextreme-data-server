@@ -517,10 +517,12 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_
     };
 
     var createGroupQueryDataGenerator = function createGroupQueryDataGenerator(data, loadOptions) {
-      var isExpanded = function isExpanded(groupKey) {
-        return loadOptions.expandedGroups.has(groupKey);
-      };
-
+      var isExpanded = function () {
+        var expandedGroups = Array.isArray(loadOptions.expandedGroups) ? new Set(loadOptions.expandedGroups) : loadOptions.expandedGroups;
+        return function (groupKey) {
+          return expandedGroups.has(groupKey);
+        };
+      }();
       var furtherGroupLevels = function furtherGroupLevels(groupLevel) {
         return groupLevel + 1 < loadOptions.grouping.length;
       };

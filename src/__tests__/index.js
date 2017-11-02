@@ -169,6 +169,26 @@ describe('data access library', function() {
   describe('createGroupQueryDataGenerator', function() {
     const { createGroupQueryDataGenerator } = fetchData.testing;
 
+    describe('isExpanded', function() {
+      it('works with a set', function() {
+        const { isExpanded } = createGroupQueryDataGenerator(null, {
+          expandedGroups: new Set(['one', 'two', 'three'])
+        }).testing;
+        assert.isTrue(isExpanded('one'));
+        assert.isTrue(isExpanded('two'));
+        assert.isFalse(isExpanded('other'));
+      });
+
+      it('works with an array', function() {
+        const { isExpanded } = createGroupQueryDataGenerator(null, {
+          expandedGroups: ['one', 'two', 'three']
+        }).testing;
+        assert.isTrue(isExpanded('one'));
+        assert.isTrue(isExpanded('two'));
+        assert.isFalse(isExpanded('other'));
+      });
+    });
+
     describe('page range values', function() {
       it('pageRangeStart', function() {
         assert.equal(
