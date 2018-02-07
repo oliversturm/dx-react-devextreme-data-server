@@ -5,7 +5,7 @@ import {
   Getter,
   Template,
   TemplatePlaceholder,
-  PluginContainer
+  Plugin
 } from '@devexpress/dx-react-core';
 
 import { CustomGrouping } from '@devexpress/dx-react-grid';
@@ -137,7 +137,7 @@ class DevExtremeDataServer extends React.PureComponent {
 
   render() {
     return (
-      <PluginContainer>
+      <Plugin>
         <Getter
           name="rows"
           computed={(
@@ -221,7 +221,8 @@ class DevExtremeDataServer extends React.PureComponent {
           computed={({ pageSize, totalCount }) =>
             pageSize > 0
               ? Math.ceil(totalCount / pageSize)
-              : totalCount > 0 ? 1 : 0}
+              : totalCount > 0 ? 1 : 0
+          }
         />
         {
           // make sure that when totalPages changes, currentPage remains
@@ -246,7 +247,7 @@ class DevExtremeDataServer extends React.PureComponent {
               this.props.loadingIndicator()}
           </div>
         </Template>
-      </PluginContainer>
+      </Plugin>
     );
   }
 }
