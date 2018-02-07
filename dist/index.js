@@ -121,7 +121,7 @@
 
     render() {
       return _react2.default.createElement(
-        _dxReactCore.PluginContainer,
+        _dxReactCore.Plugin,
         null,
         _react2.default.createElement(_dxReactCore.Getter, {
           name: 'rows',
