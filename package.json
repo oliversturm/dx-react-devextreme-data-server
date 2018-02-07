@@ -1,8 +1,7 @@
 {
   "name": "dx-react-devextreme-data-server",
-  "version": "1.0.20",
-  "description":
-    "DevExtreme React Grid plugin for remote data loading from a DevExtreme data service",
+  "version": "1.0.21",
+  "description": "DevExtreme React Grid plugin for remote data loading from a DevExtreme data service",
   "repository": {
     "type": "git",
     "url": "https://github.com/oliversturm/dx-react-devextreme-data-server.git"
@@ -10,21 +9,22 @@
   "author": "Oliver Sturm",
   "license": "SEE LICENSE IN LICENSE",
   "bugs": {
-    "url":
-      "https://github.com/oliversturm/dx-react-devextreme-data-server/issues"
+    "url": "https://github.com/oliversturm/dx-react-devextreme-data-server/issues"
   },
   "homepage": "https://github.com/oliversturm/dx-react-devextreme-data-server",
-  "keywords": ["devextreme", "devexpress", "react", "grid"],
+  "keywords": [
+    "devextreme",
+    "devexpress",
+    "react",
+    "grid"
+  ],
   "scripts": {
-    "prepare":
-      "npm run lint && babel src --ignore __tests__ --out-dir ./dist && copyfiles -u 1 ./src/loading.css ./dist && webpack",
+    "prepare": "npm run lint && babel src --ignore __tests__ --out-dir ./dist && copyfiles -u 1 ./src/loading.css ./dist && webpack",
     "lint": "eslint ./src",
     "lintfix": "eslint ./src --fix",
-    "test":
-      "npm run lint && mocha --require babel-register --require ignore-styles src/**/__tests__/**/*.js",
+    "test": "npm run lint && mocha --require babel-register --require ignore-styles src/**/__tests__/**/*.js",
     "test-watch": "npm run test -- --watch --watch-extensions js",
-    "coverage":
-      "nyc --reporter=lcovonly --reporter=text mocha --require babel-register --require ignore-styles src/**/__tests__/**/*.js"
+    "coverage": "nyc --reporter=lcovonly --reporter=text mocha --require babel-register --require ignore-styles src/**/__tests__/**/*.js"
   },
   "devDependencies": {
     "@devexpress/dx-react-core": "^1.0.0",
